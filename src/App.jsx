@@ -443,7 +443,7 @@ export default function DailyTripReportApp(){
   };
 
   const downloadPdf=()=>{
-    if (window.confirm('Warning: Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
+    if (window.confirm('⚠️ Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
       localStorage.removeItem(LS_KEY);
       buildPdf().save(`TripReport_${date||''}_${driver||'Driver'}.pdf`);
     }
@@ -469,16 +469,18 @@ export default function DailyTripReportApp(){
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
   const resetAll=()=>{
-    localStorage.removeItem(LS_KEY);
-    setCarrier("");
-    setTerminal("");
-    setTruck("");
-    setDate(todayLocal());
-    setDriver("");
-    setSig("");
-    setPaperwork([]);
-    setExtraLines([]);
-    setRows([]);
+    if (window.confirm('⚠️ Resetting the form will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
+      localStorage.removeItem(LS_KEY);
+      setCarrier("");
+      setTerminal("");
+      setTruck("");
+      setDate(todayLocal());
+      setDriver("");
+      setSig("");
+      setPaperwork([]);
+      setExtraLines([]);
+      setRows([]);
+    }
   };
 
   return (
