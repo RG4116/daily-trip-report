@@ -641,7 +641,7 @@ export default function DailyTripReportApp(){
                   </div>
                   <span className="text-gray-400 group-open:rotate-180 transition-transform" style={{fontSize: '1.6em', marginLeft: '0.2em'}} aria-label="Expand section">▼</span>
                 </summary>
-                <div className="overflow-x-auto">
+                <div>
                   <div className="grid grid-cols-1 gap-2 border-t p-3 md:grid-cols-9 md:gap-2 items-start">
                     <div className="flex w-full">
                       <input type="date" className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full" value={r.d} onChange={e=>setRow(i,{d:e.target.value})} placeholder="Date"/>
