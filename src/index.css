@@ -1,0 +1,27 @@
+/* Tailwind v4 çekirdeği */
+@import "tailwindcss";
+
+/* Form yardımcı sınıfları (düz CSS) */
+.field-label { display:block; margin-bottom: .25rem; font-size: .875rem; }
+
+/* Removed .input and .input-sm styles; using Tailwind utilities for all inputs */
+
+/* İmza canvas'ı: sabit ve stabil */
+.signature-canvas{
+  width: 420px;
+  height: 120px;
+  display: block;
+  touch-action: none;
+  background: #fff;
+  border-radius: .75rem;          /* rounded-xl */
+}
+
+@media (max-width: 768px) {
+  /* input, select { font-size: 16px !important; } */
+}
+
+/* Unify placeholder color for all inputs */
+::placeholder {
+  color: #6b7280; /* Tailwind gray-500 */
+  opacity: 1;
+}
