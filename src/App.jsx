@@ -1,4 +1,59 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+// --- Demo: Calculation logic and radio buttons (same as Trip Lines) ---
+function KmCalcDemo() {
+  const [ob, setOb] = useState("");
+  const [oe, setOe] = useState("");
+  const [tollType, setTollType] = useState("non-toll");
+  const [knt, setKnt] = useState("");
+  const [kt, setKt] = useState("");
+
+  useEffect(() => {
+    const obNum = parseFloat(ob || 0);
+    const oeNum = parseFloat(oe || 0);
+    const diff = (oeNum > obNum) ? (oeNum - obNum) : 0;
+    if (tollType === "toll") {
+      setKt(diff ? String(diff) : "");
+      setKnt("");
+    } else {
+      setKnt(diff ? String(diff) : "");
+      setKt("");
+    }
+  }, [ob, oe, tollType]);
+
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 mb-6">
+      <div className="mb-2 font-semibold text-blue-700">Km Calculation Demo</div>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+        <div>
+          <label className="block text-xs mb-1">Odo Begin</label>
+          <input type="text" value={ob} onChange={e=>setOb(e.target.value.replace(/[^0-9]/g, ""))} className="rounded border px-2 py-1 w-full" placeholder="Odo Begin" />
+        </div>
+        <div>
+          <label className="block text-xs mb-1">Odo End</label>
+          <input type="text" value={oe} onChange={e=>setOe(e.target.value.replace(/[^0-9]/g, ""))} className="rounded border px-2 py-1 w-full" placeholder="Odo End" />
+        </div>
+        <div className="flex flex-col gap-0 items-start justify-center">
+          <label className="inline-flex items-center gap-2 text-xs mb-1">
+            <input type="radio" name="demo-tollType" checked={tollType==="non-toll"} onChange={()=>setTollType("non-toll")} className="align-middle" />
+            Non-Toll
+          </label>
+          <label className="inline-flex items-center gap-2 text-xs">
+            <input type="radio" name="demo-tollType" checked={tollType==="toll"} onChange={()=>setTollType("toll")} className="align-middle" />
+            Toll
+          </label>
+        </div>
+        <div>
+          <label className="block text-xs mb-1">Km Non-Toll</label>
+          <input type="text" value={knt} readOnly className="rounded border px-2 py-1 w-full bg-gray-50" placeholder="Km Non-Toll" />
+        </div>
+        <div>
+          <label className="block text-xs mb-1">Km Toll</label>
+          <input type="text" value={kt} readOnly className="rounded border px-2 py-1 w-full bg-gray-50" placeholder="Km Toll" />
+        </div>
+      </div>
+    </div>
+  );
+}
 // Incognito detection helper
 function detectIncognito() {
   return new Promise(resolve => {
@@ -25,6 +80,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ProvinceAutocomplete, HighwayAutocomplete } from "./AutocompleteFields";
 import { VendorAutocomplete } from "./VendorAutocomplete";
+import { SignatureMode } from "./SignatureMode";
 
 const NUM_ROWS = 8;
 const PAPERWORK_OPTIONS = ['Bill Lading','Del. Receipt','Fuel Ticket','Toll Tickets','Log Sheets'];
@@ -73,6 +129,7 @@ function addSignatureImageContain(doc, dataUrl, { boxX, boxY, boxW, boxH, fallba
       const props = doc.getImageProperties(dataUrl);
       iw = props?.width || iw; ih = props?.height || ih;
     } catch {}
+    // Responsive scaling, maintain aspect ratio, fit inside box
     const pad = 4;
     const availW = boxW - 2 * pad;
     const availH = boxH - 2 * pad;
@@ -81,6 +138,7 @@ function addSignatureImageContain(doc, dataUrl, { boxX, boxY, boxW, boxH, fallba
     const h = Math.max(1, Math.floor(ih * scale));
     const x = boxX + pad + (availW - w) / 2;
     const y = boxY + pad + (availH - h) / 2;
+    // Only insert once, after form/tables are drawn, under correct header
     doc.addImage(dataUrl, "PNG", x, y, w, h, undefined, "FAST");
   } else if (fallbackName && fallbackName.trim()) {
     // Only print name if draw area is empty and name is filled
@@ -172,107 +230,44 @@ function NumericInput({ value, onChange, placeholder, className = "", ...rest })
   );
 }
 
-function SignatureField({ driverName, onChange }) {
-  const drawRef = useRef(null);
-  const drawing = useRef(false);
-  useHiDPICanvas(drawRef);
-  const [isEmpty, setIsEmpty] = useState(true);
-
-  const getXY = (e) => {
-    const r = drawRef.current.getBoundingClientRect();
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: cx - r.left, y: cy - r.top };
-  };
-  const start = (e) => {
-    drawing.current = true;
-    const ctx = drawRef.current.getContext("2d");
-    const { x, y } = getXY(e);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
-  const move = (e) => {
-    if (!drawing.current) return;
-    const ctx = drawRef.current.getContext("2d");
-    const { x, y } = getXY(e);
-    ctx.lineWidth = 1.6;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#111";
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    setIsEmpty(false);
-  };
-  const end = () => {
-    drawing.current = false;
-    // Check if canvas is empty
-    const cv = drawRef.current;
-    const ctx = cv.getContext("2d");
-    const pixels = ctx.getImageData(0, 0, cv.width, cv.height).data;
-    let empty = true;
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i + 3] !== 0 && (pixels[i] !== 255 || pixels[i + 1] !== 255 || pixels[i + 2] !== 255)) {
-        empty = false;
-        break;
-      }
-    }
-    setIsEmpty(empty);
-    onChange?.(dataURLFromCanvas(cv));
-  };
-  const clear = () => {
-    const cv = drawRef.current;
-    const ctx = cv.getContext("2d");
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, cv.width, cv.height);
-    setIsEmpty(true);
-    onChange?.("");
-  };
-
-  useEffect(() => {
-    if (isEmpty && driverName) {
-      // No preview in form, but update parent with typed signature
-      onChange?.(null); // Signal to parent that signature is empty
-    }
-  }, [isEmpty, driverName, onChange]);
-
-  return (
-    <div className="space-y-2">
-      <div className="rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden">
-        <canvas
-          ref={drawRef}
-          className="signature-canvas"
-          onMouseDown={start}
-          onMouseMove={move}
-          onMouseUp={end}
-          onMouseLeave={end}
-          onTouchStart={start}
-          onTouchMove={move}
-          onTouchEnd={end}
-        />
-      </div>
-      <button type="button" onClick={clear} className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Clear</button>
-    </div>
-  );
-}
-
 export default function DailyTripReportApp(){
+  // Final setRow logic: default Non-Toll, propagate Odo End, match requested layout
+  const setRow = (i, patch) => {
+    setRows(rows => {
+      const newRows = rows.map((row, idx) => {
+        if (idx !== i) return row;
+        const updated = { ...row, ...patch };
+        const ob = parseFloat(updated.ob || 0);
+        const oe = parseFloat(updated.oe || 0);
+        const diff = (oe > ob) ? (oe - ob) : 0;
+        updated.knt = diff ? String(diff) : "";
+        updated.kt = diff ? String(diff) : "";
+        return updated;
+      });
+      // If Odo End was changed, update ob for all subsequent rows
+      if (Object.prototype.hasOwnProperty.call(patch, 'oe')) {
+        for (let j = i + 1; j < newRows.length; j++) {
+          newRows[j].ob = newRows[j - 1].oe || "";
+        }
+      }
+      return newRows;
+    });
+  };
   const [isIncognito, setIsIncognito] = useState(false);
-
-  useEffect(() => {
-    detectIncognito().then(setIsIncognito);
-  }, []);
-  // Restore from localStorage if date matches today
-  const [carrier,setCarrier]=useState("");
-  const [terminal,setTerminal]=useState("");
-  const [truck,setTruck]=useState("");
-  const [date,setDate]=useState(()=>todayLocal());
-  const [driver,setDriver]=useState("");
-  const [sig,setSig]=useState("");
-  const [paperwork,setPaperwork]=useState([]);
-  const [rows,setRows]=useState([]);
+  const [carrier, setCarrier] = useState("");
+  const [terminal, setTerminal] = useState("");
+  const [truck, setTruck] = useState("");
+  const [date, setDate] = useState(todayLocal());
+  const [driver, setDriver] = useState("");
+  const [sig, setSig] = useState("");
+  const [paperwork, setPaperwork] = useState([]);
+  const [rows, setRows] = useState([]);
   const [extraLines, setExtraLines] = useState([]);
-
-  // Restore saved data on mount if date matches
+  const [sigAudit, setSigAudit] = useState(null);
+  const [sigAck, setSigAck] = useState(false);
   const didRestore = useRef(false);
+
+  // ...existing code...
   useEffect(() => {
     if (didRestore.current) return;
     try {
@@ -312,58 +307,38 @@ export default function DailyTripReportApp(){
     });
     setRows(r => {
       if (r.length >= NUM_ROWS) return r;
-      return [...r, { d: date, prov: null, hwy: null, ob: "", oe: "", knt: "", kt: "", l: "", fv: "" }];
+      const prev = r[r.length - 1];
+      const ob = prev ? prev.oe : "";
+      const newRows = [...r, { d: date, prov: null, hwy: null, ob, oe: "", knt: "", kt: "", l: "", fv: "", tollType: "non-toll" }];
+      for (let j = 1; j < newRows.length; j++) {
+        newRows[j].ob = newRows[j - 1].oe || "";
+      }
+      return newRows;
     });
   };
   const setExtraLine = (i, patch) => setExtraLines(l => l.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   const removeExtraLine = (i) => {
     setExtraLines(l => l.filter((_, idx) => idx !== i));
-    setRows(r => r.filter((_, idx) => idx !== i));
+    setRows(r => {
+      const newRows = r.filter((_, idx) => idx !== i);
+      for (let j = 1; j < newRows.length; j++) {
+        newRows[j].ob = newRows[j - 1].oe || "";
+      }
+      return newRows;
+    });
   };
   const togglePW=(v)=>setPaperwork(p=>p.includes(v)?p.filter(x=>x!==v):[...p,v]);
   // Enhanced setRow to handle tollType toggle and km transfer
   // Link odometer values and handle tollType toggle
-  // Enhanced setRow: auto-calculate km diff, link odometer values
-  const setRow = (i, patch) => setRows(r => {
-    let newRows = r.map((row, idx) => {
-      let newRow = { ...row, ...(idx === i ? patch : {}) };
-      return newRow;
-    });
-    // Dynamically link ob of every row to previous row's oe
-    for (let j = 1; j < newRows.length; j++) {
-      newRows[j].ob = newRows[j - 1].oe || "";
-    }
-    // Always auto-calculate km diff for all rows
-    newRows = newRows.map((row, idx) => {
-      const ob = row.ob;
-      const oe = row.oe;
-      const km = oe && ob ? Math.max(0, parseInt(oe) - parseInt(ob)) : "";
-      let newRow = { ...row, knt: km ? String(km) : "", kt: km ? String(km) : "" };
-      // Handle tollType toggle (preserve UI logic)
-      if (idx === i && patch.tollType) {
-        if (patch.tollType === "toll" && row.knt) {
-          newRow.kt = row.knt;
-          newRow.knt = "";
-        }
-        if (patch.tollType === "non-toll" && row.kt) {
-          newRow.knt = row.kt;
-          newRow.kt = "";
-        }
-      }
-      return newRow;
-    });
-    return newRows;
-  });
+  // ...existing code...
   // Enhanced addRow to carry over previous trip's ending odometer
   const addRow = () => setRows(r => {
     if (r.length >= NUM_ROWS) return r;
-    // Always set ob to previous line's oe, even if previous lines are edited after adding
     const prev = r[r.length - 1];
     const ob = prev ? prev.oe : "";
     const newRows = [...r, { d: date, prov: null, hwy: null, ob, oe: "", knt: "", kt: "", l: "", fv: "", tollType: "non-toll" }];
-    // After adding, update all ob values to match previous line's oe
-    for (let i = 1; i < newRows.length; i++) {
-      newRows[i].ob = newRows[i - 1].oe || "";
+    for (let j = 1; j < newRows.length; j++) {
+      newRows[j].ob = newRows[j - 1].oe || "";
     }
     return newRows;
   });
@@ -411,7 +386,10 @@ export default function DailyTripReportApp(){
       (r?.d && String(r.d).trim()) ? r.d : (date || ""),
       r.prov?.label || "",
       typeof r.hwy === 'object' ? (r.hwy?.label || "") : (r.hwy || ""),
-      r.ob||"", r.oe||"", r.knt||"", r.kt||"", r.l||"", r.fv||""
+      r.ob||"", r.oe||"",
+      r.tollType === "non-toll" ? (r.knt||"") : "",
+      r.tollType === "toll" ? (r.kt||"") : "",
+      r.l||"", r.fv||""
     ]);
 
     autoTable(doc,{
@@ -465,7 +443,7 @@ export default function DailyTripReportApp(){
   };
 
   const downloadPdf=()=>{
-    if (window.confirm('⚠️ Downloading the PDF will clear all saved trip data for today in this browser. Are you sure you want to continue?')) {
+    if (window.confirm('Warning: Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
       localStorage.removeItem(LS_KEY);
       buildPdf().save(`TripReport_${date||''}_${driver||'Driver'}.pdf`);
     }
@@ -505,7 +483,7 @@ export default function DailyTripReportApp(){
 
   return (
     <div className="mx-auto max-w-5xl p-4">
-      <div className="rounded-2xl border bg-white shadow p-6">
+      <div className="card">
         <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
           <span role="img" aria-label="Warning">⚠️</span>
           Your data is saved only for today in this browser. It will be lost if you use Private/Incognito mode, clear cache, switch browsers, change devices, download PDF, or reset the form.
@@ -522,10 +500,28 @@ export default function DailyTripReportApp(){
 
         {/* Static header fields */}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5 p-4">
-          <div><label className="mb-1 block text-sm">Carrier Name</label><input className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={carrier} onChange={e=>setCarrier(e.target.value)}/></div>
+          <div>
+            <label className="mb-1 block text-sm">Carrier Name</label>
+            <input
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              value={carrier}
+              onChange={e => setCarrier(e.target.value)}
+              list="carrier-options"
+              autoComplete="off"
+            />
+            <datalist id="carrier-options">
+              <option value="TVM" />
+              <option value="ILGI" />
+            </datalist>
+          </div>
           <div><label className="mb-1 block text-sm">Terminal</label><input className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={terminal} onChange={e=>setTerminal(e.target.value)}/></div>
           <div><label className="mb-1 block text-sm">Truck No</label><NumericInput value={truck} onChange={setTruck}/></div>
-          <div><label className="mb-1 block text-sm">Date</label><input type="date" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={date} onChange={e=>setDate(e.target.value)}/></div>
+          <div>
+            <label className="mb-1 block text-sm">Date</label>
+            <div className="flex w-full">
+              <input type="date" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={date} onChange={e=>setDate(e.target.value)}/>
+            </div>
+          </div>
           <div><label className="mb-1 block text-sm">Driver Name</label><input className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={driver} onChange={e=>setDriver(e.target.value)}/></div>
         </div>
 
@@ -533,19 +529,42 @@ export default function DailyTripReportApp(){
         <div className="rounded-2xl border border-dashed p-4 mb-6 bg-white">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-medium">Trip Details (max {NUM_ROWS})</div>
-            <button
-              type="button"
-              onClick={addExtraLine}
-              disabled={extraLines.length>=NUM_ROWS}
-              className={`rounded-md px-3 py-2 text-sm ${extraLines.length>=NUM_ROWS?'bg-gray-200 text-gray-500 cursor-not-allowed':'bg-blue-600 text-white hover:bg-blue-700'}`}
-            >
-              Add Trip Detail
-            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">Total added: <span className="font-semibold text-blue-600">{extraLines.length}</span></span>
+              {extraLines.length < NUM_ROWS && (
+                <button
+                  type="button"
+                  onClick={e => {
+                    const btn = e.currentTarget;
+                    btn.classList.add('clicked');
+                    setTimeout(() => btn.classList.remove('clicked'), 350);
+                    addExtraLine();
+                  }}
+                  className="btn-main px-4 py-3 text-base flex items-center gap-2 relative overflow-hidden"
+                  title="Add New Trip Detail"
+                  aria-label="Add New Trip Detail"
+                  style={{ position: 'relative' }}
+                >
+                  <span className="text-xl">➕</span> <span>Add Trip Detail</span>
+                  <style>{`
+                    .clicked {
+                      animation: rippleBtn 0.35s linear;
+                    }
+                    @keyframes rippleBtn {
+                      0% { box-shadow: 0 0 0 0 #3b82f6aa; }
+                      50% { box-shadow: 0 0 0 12px #3b82f633; }
+                      100% { box-shadow: 0 0 0 0 #3b82f600; }
+                    }
+                  `}</style>
+                </button>
+              )}
+            </div>
           </div>
+      {/* Floating Action Button removed as requested. Only inline add button remains. */}
 
           <div className="space-y-2">
             {extraLines.length===0 && (
-              <div className="text-sm text-gray-500">No trip details added yet. Start with “Add Trip Detail”.</div>
+              <div className="text-sm text-gray-500">No trip details added yet. Tap <span className='font-bold text-blue-600'>➕</span> to add your first trip.</div>
             )}
 
             {extraLines.map((r,i)=>(
@@ -555,7 +574,17 @@ export default function DailyTripReportApp(){
                     <span className="inline-flex shrink-0 items-center rounded-md bg-gray-100 px-2 py-1">{i+1}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={(e)=>{e.preventDefault(); removeExtraLine(i);}} className="rounded border px-2 py-1 text-xs hover:bg-gray-50">Delete</button>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.preventDefault();
+                        removeExtraLine(i);
+                      }}
+                      className="px-2 py-1 text-sm flex items-center gap-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 border border-gray-300 transition-shadow"
+                      style={{ boxShadow: '0 1px 4px rgba(120,130,145,0.06)' }}
+                    >
+                      <span className="text-base">🗑️</span> <span>Delete</span>
+                    </button>
                     <span className="text-gray-400 group-open:rotate-180 transition-transform" style={{fontSize: '1.6em', marginLeft: '0.2em'}} aria-label="Expand section">▼</span>
                   </div>
                 </summary>
@@ -600,12 +629,10 @@ export default function DailyTripReportApp(){
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-medium">Trip Lines (linked to Trip Details)</div>
           </div>
-
           <div className="space-y-2">
             {rows.length===0 && (
               <div className="text-sm text-gray-500">No trips added yet. Add a Trip Detail above.</div>
             )}
-
             {rows.map((r,i)=>(
               <details open key={i} className="group rounded-xl border border-gray-200 bg-white">
                 <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-2">
@@ -614,57 +641,66 @@ export default function DailyTripReportApp(){
                   </div>
                   <span className="text-gray-400 group-open:rotate-180 transition-transform" style={{fontSize: '1.6em', marginLeft: '0.2em'}} aria-label="Expand section">▼</span>
                 </summary>
-
-                <div className="grid grid-cols-1 gap-2 border-t p-3 md:grid-cols-10 md:gap-2">
-                  <input type="date" className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm" value={r.d} onChange={e=>setRow(i,{d:e.target.value})} placeholder="Date"/>
-                  <ProvinceAutocomplete
-                    value={r.prov}
-                    onChange={prov => { setRow(i, { prov, hwy: null }); }}
-                    disabled={false}
-                  />
-                  <HighwayAutocomplete
-                    province={r.prov}
-                    value={r.hwy}
-                    onChange={hwy => setRow(i, { hwy })}
-                    disabled={!r.prov}
-                  />
-                  <NumericInput value={r.ob} onChange={v=>setRow(i,{ob:v})} placeholder="Odo Begin"/>
-                  <NumericInput value={r.oe} onChange={v=>setRow(i,{oe:v})} placeholder="Odo End"/>
-                  {/* Toggle for Toll/Non-Toll */}
-                  <div className="flex flex-col gap-0 items-start justify-center md:justify-start">
-                    <label className="inline-flex items-center gap-2 text-xs mb-1">
-                      <input
-                        type="radio"
-                        name={`tollType-${i}`}
-                        checked={r.tollType==="non-toll"}
-                        onChange={()=>setRow(i,{tollType:"non-toll"})}
-                        className="align-middle"
+                <div className="overflow-x-auto">
+                  <div className="grid grid-cols-1 gap-2 border-t p-3 md:grid-cols-9 md:gap-2 items-start">
+                    <div className="flex w-full">
+                      <input type="date" className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full" value={r.d} onChange={e=>setRow(i,{d:e.target.value})} placeholder="Date"/>
+                    </div>
+                    <div className="w-full">
+                      <ProvinceAutocomplete
+                        value={r.prov}
+                        onChange={prov => { setRow(i, { prov, hwy: null }); }}
+                        disabled={false}
                       />
-                      Non-Toll
-                    </label>
-                    <label className="inline-flex items-center gap-2 text-xs">
-                      <input
-                        type="radio"
-                        name={`tollType-${i}`}
-                        checked={r.tollType==="toll"}
-                        onChange={()=>setRow(i,{tollType:"toll"})}
-                        className="align-middle"
+                    </div>
+                    <div className="w-full">
+                      <HighwayAutocomplete
+                        province={r.prov}
+                        value={r.hwy}
+                        onChange={hwy => setRow(i, { hwy })}
+                        disabled={!r.prov}
                       />
-                      Toll
-                    </label>
+                    </div>
+                    <NumericInput value={r.ob} onChange={v=>setRow(i,{ob:v})} placeholder="Odo Begin" className="px-2"/>
+                    <NumericInput value={r.oe} onChange={v=>setRow(i,{oe:v})} placeholder="Odo End" className="px-2"/>
+                    {/* TollType radio buttons vertical layout */}
+                    <div className="flex flex-col gap-0 items-start justify-center md:justify-start">
+                      <label className="inline-flex items-center gap-2 text-xs mb-1">
+                        <input
+                          type="radio"
+                          name={`tollType-${i}`}
+                          checked={r.tollType === "non-toll"}
+                          onChange={() => setRow(i, { tollType: "non-toll" })}
+                          className="align-middle"
+                        />
+                        Non-Toll
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-xs">
+                        <input
+                          type="radio"
+                          name={`tollType-${i}`}
+                          checked={r.tollType === "toll"}
+                          onChange={() => setRow(i, { tollType: "toll" })}
+                          className="align-middle"
+                        />
+                        Toll
+                      </label>
+                    </div>
+                    {/* Only show one km input, based on toggle */}
+                    {r.tollType === "non-toll" ? (
+                      <NumericInput value={r.knt} onChange={v => setRow(i, { knt: v })} placeholder="Km Non-Toll" className="px-2" />
+                    ) : (
+                      <NumericInput value={r.kt} onChange={v => setRow(i, { kt: v })} placeholder="Km Toll" className="px-2" />
+                    )}
+                    <NumericInput value={r.l} onChange={v=>setRow(i,{l:v})} placeholder="Liters" className="px-2"/>
+                    <div className="md:col-span-1">
+                      <VendorAutocomplete
+                        value={r.fv || ""}
+                        onChange={v => setRow(i, { fv: v })}
+                        disabled={false}
+                      />
+                    </div>
                   </div>
-                  {/* Only show one km input, based on toggle */}
-                  {r.tollType==="non-toll" ? (
-                    <NumericInput value={r.knt} onChange={v=>setRow(i,{knt:v})} placeholder="Km Non-Toll"/>
-                  ) : (
-                    <NumericInput value={r.kt} onChange={v=>setRow(i,{kt:v})} placeholder="Km Toll"/>
-                  )}
-                  <NumericInput value={r.l} onChange={v=>setRow(i,{l:v})} placeholder="Liters"/>
-                  <VendorAutocomplete
-                    value={r.fv || ""}
-                    onChange={v => setRow(i, { fv: v })}
-                    disabled={false}
-                  />
                 </div>
               </details>
             ))}
@@ -684,7 +720,27 @@ export default function DailyTripReportApp(){
         {/* Signature section moved to bottom above action buttons */}
         <div className="mt-6 mb-6">
           <label className="mb-1 block text-sm">Signature</label>
-          <SignatureField driverName={driver} onChange={setSig}/>
+          <div
+            className="signature-container rounded-xl border border-gray-300 shadow bg-white p-3 mb-2"
+            style={{
+              margin: 12,
+              padding: 8,
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div style={{ width: '100%', maxWidth: 400, margin: '0 auto' }}>
+              <SignatureMode
+                value={sig}
+                onChange={(dataUrl, audit) => {
+                  setSig(dataUrl);
+                  setSigAudit(audit);
+                }}
+                readOnly={false}
+              />
+            </div>
+          </div>
+          {/* Signature certification checkbox removed as requested */}
         </div>
 
         <div className="flex flex-wrap gap-3">
