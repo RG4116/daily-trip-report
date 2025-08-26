@@ -158,10 +158,10 @@ useEffect(() => {
       {!active && (
         <button
           type="button"
-          className="rounded-full border border-gray-200 px-4 py-3 bg-blue-600 text-white w-full shadow-sm flex items-center justify-center gap-2 text-lg"
+          className="rounded-full border border-gray-200 px-4 py-3 bg-gray-800 text-white w-full shadow-sm flex items-center justify-center gap-2 text-lg hover:bg-gray-900"
           onClick={handleEdit}
         >
-          <span className="text-xl">➕</span> <span>Add Signature</span>
+          <span className="text-xl" style={{ color: '#fff', fontWeight: 700 }}>+</span> <span style={{ color: '#fff', fontWeight: 500 }}>Add Signature</span>
         </button>
       )}
       {active && showCanvas && (

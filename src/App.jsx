@@ -739,6 +739,15 @@ export default function DailyTripReportApp(){
                   setSigAudit(audit);
                 }}
                 readOnly={false}
+                buttonProps={{
+                  type: "button",
+                  className: "mt-4 flex items-center gap-2 rounded-md px-4 py-2 bg-gray-800 text-white hover:bg-gray-900",
+                  style: { fontWeight: 500 },
+                  children: <>
+                    <span style={{ display: 'inline-block', color: '#ffffff', fontSize: '1.4em', fontWeight: 700, background: 'none', boxShadow: 'none' }}>+</span>
+                    <span style={{ color: '#ffffff', fontWeight: 500 }}>Add Signature</span>
+                  </>
+                }}
               />
             </div>
           </div>
@@ -746,10 +755,22 @@ export default function DailyTripReportApp(){
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button type="button" onClick={downloadPdf} className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Download PDF</button>
-          <button type="button" onClick={sendByEmail} className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700">Send by Email</button>
-          <button type="button" onClick={openPdf} className="rounded-md border px-4 py-2 hover:bg-gray-50">Open PDF in New Tab</button>
-          <button type="button" onClick={resetAll} className="rounded-md border px-4 py-2 hover:bg-gray-50">Reset Form</button>
+          <button type="button" onClick={downloadPdf} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
+            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Download PDF">📥</span>
+            <span>Download PDF</span>
+          </button>
+          <button type="button" onClick={sendByEmail} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
+            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Send by Email">✉️</span>
+            <span>Send by Email</span>
+          </button>
+          <button type="button" onClick={openPdf} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
+            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Open PDF in New Tab">🗔</span>
+            <span>Open PDF in New Tab</span>
+          </button>
+          <button type="button" onClick={resetAll} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
+            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Reset">♻️</span>
+            <span>Reset</span>
+          </button>
         </div>
       </div>
     </div>
