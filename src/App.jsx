@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import "./global.css";
 // --- Demo: Calculation logic and radio buttons (same as Trip Lines) ---
 function KmCalcDemo() {
   const [ob, setOb] = useState("");
@@ -505,7 +506,7 @@ export default function DailyTripReportApp(){
           <div>
             <label className="mb-1 block text-sm">Carrier Name</label>
             <input
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded border border-gray-300 px-3 py-2 text-base" style={{ fontSize: '16px' }}
               value={carrier}
               onChange={e => setCarrier(e.target.value)}
               list="carrier-options"
@@ -516,15 +517,15 @@ export default function DailyTripReportApp(){
               <option value="ILGI" />
             </datalist>
           </div>
-          <div><label className="mb-1 block text-sm">Terminal</label><input className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={terminal} onChange={e=>setTerminal(e.target.value)}/></div>
+          <div><label className="mb-1 block text-sm">Terminal</label><input className="w-full rounded border border-gray-300 px-3 py-2 text-base" style={{ fontSize: '16px' }} value={terminal} onChange={e=>setTerminal(e.target.value)}/></div>
           <div><label className="mb-1 block text-sm">Truck No</label><NumericInput value={truck} onChange={setTruck}/></div>
           <div>
             <label className="mb-1 block text-sm">Date</label>
             <div className="flex w-full">
-              <input type="date" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={date} onChange={e=>setDate(e.target.value)}/>
+              <input type="date" className="w-full rounded border border-gray-300 px-3 py-2 text-base" style={{ fontSize: '16px' }} value={date} onChange={e=>setDate(e.target.value)}/>
             </div>
           </div>
-          <div><label className="mb-1 block text-sm">Driver Name</label><input className="w-full rounded border border-gray-300 px-3 py-2 text-sm" value={driver} onChange={e=>setDriver(e.target.value)}/></div>
+          <div><label className="mb-1 block text-sm">Driver Name</label><input className="w-full rounded border border-gray-300 px-3 py-2 text-base" style={{ fontSize: '16px' }} value={driver} onChange={e=>setDriver(e.target.value)}/></div>
         </div>
 
         {/* Addable section for Trailer/From/To/Dispatch/LDMT/Bill/Weight */}
