@@ -9,7 +9,7 @@ export default defineConfig({
     tailwind(),
     VitePWA({
       registerType: 'autoUpdate',
-      devOptions: { enabled: true },
+      devOptions: { enabled: false },
       manifest: {
         name: 'Daily Trip Report',
         short_name: 'TripReport',
