@@ -517,23 +517,61 @@ export default function DailyTripReportApp(){
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState('');
   const fileInputRef = useRef(null);
+  
+  // NEW: Validation errors (all fields except liters and fuel vendor required)
+  const validationErrors = useMemo(()=>{
+    const errs = [];
+    // Header required fields (retain)
+    if(!carrier?.trim()) errs.push('Carrier Name is required');
+    if(!terminal?.trim()) errs.push('Terminal is required');
+    if(!truck?.trim()) errs.push('Truck No is required');
+    if(!date?.trim()) errs.push('Date is required');
+    if(!driver?.trim()) errs.push('Driver Name is required');
 
-  // Export current form data
+    // Trip Detail fields - ALL required for EVERY trip detail row (always validated)
+    extraLines.forEach((d, idx)=>{
+      // All fields are always required for trip details
+      if(!d.trailer?.trim()) errs.push(`Trip Detail #${idx+1}: Trailer No required`);
+      if(!d.fromLoc?.trim()) errs.push(`Trip Detail #${idx+1}: From required`);
+      if(!d.toLoc?.trim()) errs.push(`Trip Detail #${idx+1}: To required`);
+      if(!d.dispatch?.trim()) errs.push(`Trip Detail #${idx+1}: Dispatch No required`);
+      if(!d.blno?.trim()) errs.push(`Trip Detail #${idx+1}: Bill No required`);
+      if(!d.weight?.trim()) errs.push(`Trip Detail #${idx+1}: Weight required`);
+    });
+
+    // Trip Line fields - ALL required if any of them is started (excluding liters & fuel vendor)
+    rows.forEach((r, idx)=>{
+      const fields = [r.d, r?.prov?.label, (Array.isArray(r.hwys)?r.hwys.length:0)>0, r.ob, r.oe, r.knt, r.kt];
+      const anyFilled = fields.some(v=>{
+        if(Array.isArray(v)) return v.length>0; 
+        return String(v||'').trim()!=='';
+      });
+      if(anyFilled){
+        if(!r.d?.trim()) errs.push(`Trip Line #${idx+1}: Date required`);
+        if(!(r?.prov?.label?.trim())) errs.push(`Trip Line #${idx+1}: Province required`);
+        const hasHwy = Array.isArray(r.hwys) ? r.hwys.length>0 : false;
+        if(!hasHwy) errs.push(`Trip Line #${idx+1}: Highway Used required`);
+        if(!r.ob?.trim()) errs.push(`Trip Line #${idx+1}: Odometer Begin required`);
+        if(!r.oe?.trim()) errs.push(`Trip Line #${idx+1}: Odometer End required`);
+        const kmValue = r.tollType === 'toll' ? r.kt : r.knt; // only displayed field
+        if(!kmValue?.trim()) errs.push(`Trip Line #${idx+1}: KM ${r.tollType==='toll'?'TOLL':'NON-TOLL'} required`);
+      }
+    });
+
+    return errs;
+  },[carrier, terminal, truck, date, driver, extraLines, rows]);
+  const isFormValidForExport = validationErrors.length === 0;
+
+  // Export current form data (blocked if validation fails)
   const handleExport = () => {
-    const currentData = {
-      carrier,
-      terminal,
-      truck,
-      date,
-      driver,
-      sig,
-      paperwork,
-      rows,
-      extraLines
-    };
+    if(!isFormValidForExport){
+      alert('Eksik zorunlu alanlar var.\nZorunlu Alanlar:\n- Trip Detail: Trailer No, From, To, Dispatch No, Bill No, Weight\n- Trip Line: Date, Province, Highway, Odometer Begin/End, KM\n- Header: Carrier, Terminal, Truck, Date, Driver\n\nMissing Required Fields:\n- ' + validationErrors.join('\n- '));
+      return;
+    }
+    const currentData = { carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines };
     exportFormData(currentData);
   };
-
+  
   // Import form data
   const handleImport = (event) => {
     const file = event.target.files[0];
@@ -810,7 +848,6 @@ export default function DailyTripReportApp(){
           head: [["TRAILER NO", "FROM", "TO", "DISPATCH NO", "LD / MT", "B/L NO", "WEIGHT"]],
           body: filledExtra.map(r => [r.trailer||'', r.fromLoc||'', r.toLoc||'', r.dispatch||'', r.ldmt||'', r.blno||'', r.weight||'']),
           margin: { left: M, right: M },
-          tableWidth: tableWidth, // Fixed width to match trip lines table
           styles: { 
             font: 'times', 
             fontSize: fs, 
@@ -841,7 +878,6 @@ export default function DailyTripReportApp(){
             5: { cellWidth: tableWidth * 0.15 }, // B/L NO
             6: { cellWidth: tableWidth * 0.18 }, // WEIGHT
           },
-          tableWidth: tableWidth,
           pageBreak: 'avoid',
           rowPageBreak: 'avoid',
         });
@@ -860,9 +896,15 @@ export default function DailyTripReportApp(){
         r?.l||"", r?.fv||""
       ]);
 
+      // Calculate KM totals
+      const totalNonToll = printable.reduce((sum,r)=>sum + (r?.tollType==='non-toll' ? (parseFloat(r?.knt)||0) : 0),0);
+      const totalToll    = printable.reduce((sum,r)=>sum + (r?.tollType==='toll' ? (parseFloat(r?.kt)||0) : 0),0);
+      // Optional: total liters if needed later
+      // const totalLiters = printable.reduce((s,r)=> s + (parseFloat(r?.l)||0),0);
+
       autoTable(doc,{
         head, body, startY: y, margin:{left:M,right:M},
-        tableWidth: tableWidth, // Same width as details table
+        foot: [["","","","","TOTALS:", String(totalNonToll||''), String(totalToll||''), "", ""]],
         styles:{
           font:'times',
           fontSize:fs,
@@ -872,7 +914,7 @@ export default function DailyTripReportApp(){
           lineColor:PDF_STYLE.colors.black,  // Pure black borders
           lineWidth:PDF_STYLE.table.lineWidth,
           textColor:PDF_STYLE.colors.black,  // Black text
-          minCellHeight: rowMinH, 
+          minCellHeight: rowMinH,
           overflow: 'linebreak'
         },
         headStyles:{
@@ -883,6 +925,14 @@ export default function DailyTripReportApp(){
           fontStyle:'bold', 
           minCellHeight: rowMinH,
           halign:'left'  // Left align headers
+        },
+        footStyles:{
+          fillColor: [240,240,240],
+          textColor: PDF_STYLE.colors.black,
+          fontStyle: 'bold',
+          lineColor: PDF_STYLE.colors.black,
+          lineWidth: PDF_STYLE.table.lineWidth,
+          halign: 'left'
         },
         columnStyles:{
           0: { cellWidth: tableWidth * 0.08 }, // DATE
@@ -895,7 +945,6 @@ export default function DailyTripReportApp(){
           7: { cellWidth: tableWidth * 0.08 }, // LITERS
           8: { cellWidth: tableWidth * 0.13 }, // FUEL VENDOR
         },
-        tableWidth: tableWidth,
         pageBreak: 'avoid',
         rowPageBreak: 'avoid',
       });
@@ -1006,6 +1055,10 @@ export default function DailyTripReportApp(){
   };
 
   const downloadPdf = async () => {
+    if(!isFormValidForExport){
+      alert('Eksik zorunlu alanlar var.\nZorunlu Alanlar:\n- Trip Detail: Trailer No, From, To, Dispatch No, Bill No, Weight\n- Trip Line: Date, Province, Highway, Odometer Begin/End, KM\n- Header: Carrier, Terminal, Truck, Date, Driver\n\nMissing Required Fields:\n- ' + validationErrors.join('\n- '));
+      return;
+    }
     if (window.confirm('⚠️ Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
       try {
         localStorage.removeItem(LS_KEY);
@@ -1074,13 +1127,12 @@ export default function DailyTripReportApp(){
         )}
         <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Daily Fuel / Trip Report</h2>
-          
-          {/* Export/Import Controls */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleExport}
-              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+              className={`px-3 py-1 rounded text-sm ${isFormValidForExport? 'bg-blue-500 text-white hover:bg-blue-600':'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
               title="Export current form data to JSON file"
+              disabled={!isFormValidForExport}
             >
               📤 Export
             </button>
@@ -1100,19 +1152,14 @@ export default function DailyTripReportApp(){
             />
           </div>
         </div>
-
-        {/* Import/Export Status Messages */}
-        {importSuccess && (
-          <div className="mx-4 mt-2 rounded-lg bg-green-100 border border-green-300 p-3 text-green-800 text-sm">
-            ✅ {importSuccess}
+        {(!isFormValidForExport && validationErrors.length>0) && (
+          <div className="mx-4 mt-2 rounded-lg bg-red-100 border border-red-300 p-3 text-red-800 text-xs space-y-1">
+            <div className="font-semibold">Missing Required Fields:</div>
+            <ul className="list-disc pl-5 space-y-0.5">
+              {validationErrors.map((e,i)=>(<li key={i}>{e}</li>))}
+            </ul>
           </div>
         )}
-        {importError && (
-          <div className="mx-4 mt-2 rounded-lg bg-red-100 border border-red-300 p-3 text-red-800 text-sm">
-            ❌ {importError}
-          </div>
-        )}
-
         {/* Static header fields */}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5 p-4">
           <div>
@@ -1403,7 +1450,7 @@ export default function DailyTripReportApp(){
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button type="button" onClick={downloadPdf} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
+          <button type="button" onClick={downloadPdf} disabled={!isFormValidForExport} className={`rounded-md px-4 py-2 border border-gray-300 flex items-center gap-2 ${isFormValidForExport? 'text-gray-800 hover:bg-gray-100':'text-gray-400 cursor-not-allowed bg-gray-100'}`}>
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Download PDF">📥</span>
             <span>Download PDF</span>
           </button>
