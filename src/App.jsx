@@ -904,7 +904,7 @@ export default function DailyTripReportApp(){
 
       autoTable(doc,{
         head, body, startY: y, margin:{left:M,right:M},
-        foot: [["","","","","TOTALS:", String(totalNonToll||''), String(totalToll||''), "", ""]],
+        foot: [["","","","","TOTAL KM:", String(totalNonToll||''), String(totalToll||''), "", ""]],
         styles:{
           font:'times',
           fontSize:fs,
