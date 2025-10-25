@@ -511,6 +511,7 @@ export default function DailyTripReportApp(){
   const [extraLines, setExtraLines] = useState([]);
   const [sigAudit, setSigAudit] = useState(null);
   const [sigAck, setSigAck] = useState(false);
+  const [notes, setNotes] = useState("");
   const didRestore = useRef(false);
   
   // Import/Export states
@@ -637,6 +638,7 @@ export default function DailyTripReportApp(){
           }));
           setRows(migratedRows);
           setExtraLines(obj.extraLines || []);
+          setNotes(obj.notes || "");
         }
       }
     } catch {}
@@ -645,11 +647,11 @@ export default function DailyTripReportApp(){
 
   // Save to localStorage whenever relevant state changes
   useEffect(() => {
-    const obj = { carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines };
+    const obj = { carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines, notes };
     if (date === todayLocal()) {
       localStorage.setItem(LS_KEY, JSON.stringify(obj));
     }
-  }, [carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines]);
+  }, [carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines, notes]);
 
   const addExtraLine = () => {
     setExtraLines(l => {
@@ -1016,69 +1018,92 @@ export default function DailyTripReportApp(){
 
       let y2=doc.lastAutoTable.finalY+12;
       
-      // Bottom section layout
-      const bottomY = H - M - 60; // 60pt from bottom
-
-      // Barcode and Report ID (bottom left)
-      const reportId = makeReportId(date);
-      const barcodeW = 180;
-      const barcodeH = 35; // Yeterli yükseklik
-      const barcodeX = M; // Left side
-      const barcodeY = H - M - 45; // Sayfanın dibinden yeterli mesafe
+      // ===== FIXED BOTTOM SECTION - ALWAYS FITS ON ONE PAGE =====
+      // Position from actual bottom of page (H = 595.28 for A4 landscape)
+      const fixedBottomY = H - M - 50; // 50pt from bottom margin
+      const notesAreaHeight = 50; // Fixed height for notes area
+      const notesTopY = fixedBottomY - notesAreaHeight; // Notes start here
       
-      try {
-        drawBarcode(doc, reportId, { maxWidth: barcodeW, height: barcodeH, x: barcodeX, y: barcodeY });
-      } catch (barcodeError) {
-        console.warn('Barcode drawing failed:', barcodeError);
+      // Notes section (fixed height)
+      let dividerY;
+      if (notes.trim()) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...PDF_STYLE.colors.black);
+        doc.text("NOTES:", M, notesTopY);
+        
+        doc.setFont("times", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...PDF_STYLE.colors.black);
+        const notesMaxWidth = W - 2 * M;
+        const splitNotes = doc.splitTextToSize(notes, notesMaxWidth);
+        
+        // Limit notes display to fixed area
+        const maxNotesLines = 5;
+        const displayNotes = splitNotes.slice(0, maxNotesLines);
+        doc.text(displayNotes, M, notesTopY + 7);
+        
+        // Divider line - only show if there are notes
+        dividerY = notesTopY - 8;
+        doc.setDrawColor(...PDF_STYLE.colors.gray);
+        doc.setLineWidth(0.5);
+        doc.line(M, dividerY, W - M, dividerY);
+      } else {
+        // No notes, so divider Y is positioned lower (no notes area to separate)
+        dividerY = notesTopY;
       }
-      // Report ID'yi barcode'un altına yerleştir
-      doc.setFontSize(8); 
-      doc.setTextColor(...PDF_STYLE.colors.mediumGray);
-      doc.text(`Report ID: ${reportId}`, barcodeX, barcodeY + 8);
-
-      // Paperwork section (bottom right)
-      const paperworkX = W - M - 300; // 300pt from right edge
-      doc.setFont("times","bold");
-      doc.setFontSize(PDF_STYLE.header.fieldFontSize);
-      doc.setTextColor(...PDF_STYLE.colors.black);
-      doc.text("PAPERWORK ATTACHED:", paperworkX, bottomY);
       
-      // Paperwork checkboxes (like FormPreview style)
-      const checkboxSize = 12; // Kutuyu büyüttük
-      const checkboxSpacing = 8;
-      let checkboxY = bottomY + 15;
-      let checkboxX = paperworkX;
+      // ===== PAPERWORK ON FAR RIGHT - FIXED AT BOTTOM =====
+      const paperworkRightX = W - M - 170;
+      const checkboxSize = 10;
+      
+      // Paperwork positioned well above divider (more breathing room from notes)
+      const paperworkStartY = dividerY - 50;
+      
+      // Header
+      doc.setFont("times", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...PDF_STYLE.colors.black);
+      doc.text("PAPERWORK ATTACHED:", paperworkRightX, paperworkStartY);
+      
+      // Paperwork items - 2 columns, properly spaced
+      const pwCol1X = paperworkRightX;
+      const pwCol2X = paperworkRightX + 95;
+      const pwFirstItemY = paperworkStartY + 10; // 10pt spacing from header to first item
+      const itemSpacing = 12; // 12pt spacing between items (more space)
       
       PAPERWORK_OPTIONS.forEach((item, index) => {
         const isChecked = paperwork.includes(item);
         
-        // Draw checkbox
-        doc.setDrawColor(...PDF_STYLE.colors.gray);
-        doc.setLineWidth(1);
-        doc.rect(checkboxX, checkboxY - checkboxSize, checkboxSize, checkboxSize);
-        
-        // Draw checkmark if checked
-        if (isChecked) {
-          doc.setFont("times", "bold");
-          doc.setFontSize(10);
-          doc.setTextColor(...PDF_STYLE.colors.black);
-          // Alternatif olarak X işareti de kullanabiliriz
-          doc.text("X", checkboxX + 3, checkboxY - 2);
+        // Column distribution: items 0,1,2 in col1; items 3,4 in col2
+        let itemX, itemY;
+        if (index < 3) {
+          itemX = pwCol1X;
+          itemY = pwFirstItemY + (index * itemSpacing);
+        } else {
+          itemX = pwCol2X;
+          itemY = pwFirstItemY + ((index - 3) * itemSpacing);
         }
         
-        // Draw label
+        // Draw checkbox rectangle
+        doc.setDrawColor(...PDF_STYLE.colors.black);
+        doc.setLineWidth(0.5);
+        doc.rect(itemX, itemY, checkboxSize, checkboxSize);
+        
+        // If checked, draw simple checkmark lines
+        if (isChecked) {
+          doc.setDrawColor(...PDF_STYLE.colors.black);
+          doc.setLineWidth(1);
+          // Draw checkmark with two lines (like ✓)
+          doc.line(itemX + 2, itemY + 5.5, itemX + 3.5, itemY + 7);      // Left diagonal
+          doc.line(itemX + 3.5, itemY + 7, itemX + 7.5, itemY + 3.5);    // Right diagonal
+        }
+        
+        // Draw label text next to checkbox
         doc.setFont("times", "normal");
         doc.setFontSize(8);
-        doc.text(item.toUpperCase(), checkboxX + checkboxSize + 4, checkboxY - 3);
-        
-        // Move to next line for next checkbox
-        checkboxY += 12;
-        
-        // If we reach 3 items, start a new column
-        if (index === 2) {
-          checkboxX += 150;
-          checkboxY = bottomY + 15;
-        }
+        doc.setTextColor(...PDF_STYLE.colors.black);
+        doc.text(item.toUpperCase(), itemX + checkboxSize + 3, itemY + 6.5, { maxWidth: 80 });
       });
 
       return doc;
@@ -1174,6 +1199,7 @@ export default function DailyTripReportApp(){
       setPaperwork([]);
       setExtraLines([]);
       setRows([]);
+      setNotes("");
     }
   };
 
@@ -1471,6 +1497,18 @@ export default function DailyTripReportApp(){
               {v}
             </label>
           ))}
+        </div>
+
+        {/* Notes section */}
+        <div className="mt-6 mb-6">
+          <label className="mb-1 block text-sm font-medium">Notes</label>
+          <textarea
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-base md:text-sm placeholder-gray-400 resize-none"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Add any additional notes or comments..."
+            rows="4"
+          />
         </div>
 
         {/* Signature section moved to bottom above action buttons */}
