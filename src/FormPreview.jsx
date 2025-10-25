@@ -157,20 +157,20 @@ export default function DailyTripReportFormPreview() {
           <div className="flex mb-1 gap-4">
             <div className="flex-1 px-2 py-1 print:py-1">
               <div className="font-semibold leading-tight">CARRIER NAME</div>
-              <div className="mt-1 h-6 border-b border-black flex items-end">
-                <span className="text-[11px] leading-tight">{saved.carrier}</span>
+              <div className="mt-1 h-6 border-b border-gray-400 flex items-end">
+                <span className="text-[13px] leading-tight">{saved.carrier}</span>
               </div>
             </div>
             <div className="flex-1 px-2 py-1 print:py-1">
               <div className="font-semibold leading-tight">TERMINAL</div>
-              <div className="mt-1 h-6 border-b border-black flex items-end">
-                <span className="text-[11px] leading-tight">{saved.terminal}</span>
+              <div className="mt-1 h-6 border-b border-gray-400 flex items-end">
+                <span className="text-[13px] leading-tight">{saved.terminal}</span>
               </div>
             </div>
             <div className="flex-1 px-2 py-1 print:py-1">
               <div className="font-semibold leading-tight">TRUCK NO</div>
-              <div className="mt-1 h-6 border-b border-black flex items-end">
-                <span className="text-[11px] leading-tight">{saved.truck}</span>
+              <div className="mt-1 h-6 border-b border-gray-400 flex items-end">
+                <span className="text-[13px] leading-tight">{saved.truck}</span>
               </div>
             </div>
           </div>
@@ -179,19 +179,19 @@ export default function DailyTripReportFormPreview() {
           <div className="flex mb-2 gap-4">
             <div className="flex-1 px-2 py-1 print:py-1">
               <div className="font-semibold leading-tight">DATE</div>
-              <div className="mt-1 h-6 border-b border-black flex items-end">
-                <span className="text-[11px] leading-tight">{saved.date}</span>
+              <div className="mt-1 h-6 border-b border-gray-400 flex items-end">
+                <span className="text-[13px] leading-tight">{saved.date}</span>
               </div>
             </div>
             <div className="flex-1 px-2 py-1 print:py-1">
               <div className="font-semibold leading-tight">DRIVER NAME</div>
-              <div className="mt-1 h-6 border-b border-black flex items-end">
-                <span className="text-[11px] leading-tight">{saved.driver}</span>
+              <div className="mt-1 h-6 border-b border-gray-400 flex items-end">
+                <span className="text-[13px] leading-tight">{saved.driver}</span>
               </div>
             </div>
             <div className="flex-1 px-2 py-1 print:py-1">
               <div className="font-semibold leading-tight">DRIVER SIGNATURE</div>
-              <div className="mt-1 h-6 border-b border-black flex items-end overflow-hidden">
+              <div className="mt-1 h-6 border-b border-gray-400 flex items-end overflow-hidden">
                 {saved.sig ? (
                   <img src={saved.sig} alt="signature" className="max-h-5 object-contain" />
                 ) : (
@@ -209,10 +209,10 @@ export default function DailyTripReportFormPreview() {
                 const checked = saved.paperwork?.includes(item);
                 return (
                   <span key={item} className="inline-flex items-center">
-                    <span className="w-3.5 h-3.5 border border-black mr-1 flex items-center justify-center text-[9px] leading-[9px]">
+                    <span className="w-3.5 h-3.5 border border-gray-400 mr-1 flex items-center justify-center text-[9px] leading-[9px]">
                       {checked ? '✓' : ''}
                     </span>
-                    <span className="uppercase text-[10px] tracking-tight">{item}</span>
+                    <span className="uppercase text-[12px] tracking-tight">{item}</span>
                   </span>
                 );
               })}
@@ -221,28 +221,28 @@ export default function DailyTripReportFormPreview() {
 
           {/* Trip Details: table with only filled rows */}
           {details.length > 0 && (
-            <table className="w-full border border-black mb-3">
+            <table className="w-full border border-gray-400 mb-3">
               <thead>
-                <tr className="bg-gray-100 font-semibold print:bg-gray-200">
-                  <th className="border border-black px-1 py-1">TRAILER NO</th>
-                  <th className="border border-black px-1 py-1">FROM</th>
-                  <th className="border border-black px-1 py-1">TO</th>
-                  <th className="border border-black px-1 py-1">DISPATCH NO</th>
-                  <th className="border border-black px-1 py-1">LD / MT</th>
-                  <th className="border border-black px-1 py-1">B/L NO</th>
-                  <th className="border border-black px-1 py-1">WEIGHT</th>
+                <tr className="font-semibold">
+                  <th className="border border-gray-400 px-2 py-2 text-[13px]">TRAILER NO</th>
+                  <th className="border border-gray-400 px-2 py-2 text-[13px]">FROM</th>
+                  <th className="border border-gray-400 px-2 py-2 text-[13px]">TO</th>
+                  <th className="border border-gray-400 px-2 py-2 text-[13px]">DISPATCH NO</th>
+                  <th className="border border-gray-400 px-2 py-2 text-[13px]">LD / MT</th>
+                  <th className="border border-gray-400 px-2 py-2 text-[13px]">B/L NO</th>
+                  <th className="border border-gray-400 px-2 py-2 text-[13px]">WEIGHT</th>
                 </tr>
               </thead>
               <tbody>
                 {details.map((d, i) => (
-                  <tr key={i} className="h-7">
-                    <td className="border border-black px-1 py-1">{d.trailer}</td>
-                    <td className="border border-black px-1 py-1">{d.fromLoc}</td>
-                    <td className="border border-black px-1 py-1">{d.toLoc}</td>
-                    <td className="border border-black px-1 py-1">{d.dispatch}</td>
-                    <td className="border border-black px-1 py-1">{d.ldmt}</td>
-                    <td className="border border-black px-1 py-1">{d.blno}</td>
-                    <td className="border border-black px-1 py-1">{d.weight}</td>
+                  <tr key={i} className="h-8">
+                    <td className="border border-gray-400 px-2 py-2 text-[13px]">{d.trailer}</td>
+                    <td className="border border-gray-400 px-2 py-2 text-[13px]">{d.fromLoc}</td>
+                    <td className="border border-gray-400 px-2 py-2 text-[13px]">{d.toLoc}</td>
+                    <td className="border border-gray-400 px-2 py-2 text-[13px]">{d.dispatch}</td>
+                    <td className="border border-gray-400 px-2 py-2 text-[13px]">{d.ldmt}</td>
+                    <td className="border border-gray-400 px-2 py-2 text-[13px]">{d.blno}</td>
+                    <td className="border border-gray-400 px-2 py-2 text-[13px]">{d.weight}</td>
                   </tr>
                 ))}
               </tbody>
@@ -250,32 +250,32 @@ export default function DailyTripReportFormPreview() {
           )}
 
           {/* Trip Table (only filled rows) */}
-          <table className="w-full border border-black mb-3">
+          <table className="w-full border border-gray-400 mb-3">
             <thead>
-              <tr className="bg-gray-100 font-semibold print:bg-gray-200">
-                <th className="border border-black px-1 py-1">DATE</th>
-                <th className="border border-black px-1 py-1">PROVINCE</th>
-                <th className="border border-black px-1 py-1">HIGHWAY USED</th>
-                <th className="border border-black px-1 py-1">ODOMETER BEGIN</th>
-                <th className="border border-black px-1 py-1">ODOMETER END</th>
-                <th className="border border-black px-1 py-1">KM NON-TOLL</th>
-                <th className="border border-black px-1 py-1">KM TOLL</th>
-                <th className="border border-black px-1 py-1">LITERS</th>
-                <th className="border border-black px-1 py-1">FUEL VENDOR</th>
+              <tr className="font-semibold">
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">DATE</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">PROVINCE</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">HIGHWAY USED</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">ODOMETER BEGIN</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">ODOMETER END</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">KM NON-TOLL</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">KM TOLL</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">LITERS</th>
+                <th className="border border-gray-400 px-2 py-2 text-[13px]">FUEL VENDOR</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={i} className="h-7">
-                  <td className="border border-black px-1 py-1">{r?.d || saved.date || ''}</td>
-                  <td className="border border-black px-1 py-1">{r?.prov?.label || ''}</td>
-                  <td className="border border-black px-1 py-1">{formatHwys(r)}</td>
-                  <td className="border border-black px-1 py-1">{r?.ob || ''}</td>
-                  <td className="border border-black px-1 py-1">{r?.oe || ''}</td>
-                  <td className="border border-black px-1 py-1">{r?.tollType === 'non-toll' ? (r?.knt || '') : ''}</td>
-                  <td className="border border-black px-1 py-1">{r?.tollType === 'toll' ? (r?.kt || '') : ''}</td>
-                  <td className="border border-black px-1 py-1">{r?.l || ''}</td>
-                  <td className="border border-black px-1 py-1">{r?.fv || ''}</td>
+                <tr key={i} className="h-8">
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.d || saved.date || ''}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.prov?.label || ''}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{formatHwys(r)}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.ob || ''}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.oe || ''}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.tollType === 'non-toll' ? (r?.knt || '') : ''}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.tollType === 'toll' ? (r?.kt || '') : ''}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.l || ''}</td>
+                  <td className="border border-gray-400 px-2 py-2 text-[13px]">{r?.fv || ''}</td>
                 </tr>
               ))}
             </tbody>

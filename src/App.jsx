@@ -140,24 +140,24 @@ import autoTable from "jspdf-autotable";
 // Unified PDF Style Configuration - matches FormPreview exactly
 const PDF_STYLE = {
   colors: {
-    black: [0, 0, 0],           // Pure black borders and text
+    black: [0, 0, 0],           // Black text
+    gray: [156, 163, 175],      // Modern gray borders (matches border-gray-400)
     darkText: [25, 31, 44],     // Dark text color
-    headerBg: [243, 244, 246],  // Light gray header (matches bg-gray-100)
     white: [255, 255, 255],     // White background
     lightGray: [180, 180, 180], // Light gray for barcode
     mediumGray: [90, 98, 112],  // Medium gray for report ID
   },
   table: {
     lineWidth: 1,               // Solid borders like FormPreview
-    cellPadding: 2,             // Tight padding
-    fontSize: 9,                // Small readable font
+    cellPadding: 3,             // Increased padding for better spacing
+    fontSize: 11,               // Larger readable font (was 9, now 11)
     headerFontWeight: 'bold',   // Bold headers
     textAlign: 'left',          // Left-aligned like FormPreview
   },
   header: {
     fontSize: 16,               // Main title size
     fieldFontSize: 10,          // Field labels
-    fieldValueSize: 10,         // Field values
+    fieldValueSize: 12,         // Field values (increased from 10 to 12)
     underlineWidth: 1,          // Underline thickness
   }
 };
@@ -446,7 +446,7 @@ function drawBarcode(doc, text, { maxWidth = 200, height = 36, x = 10, y = 10 } 
   // Draw a clean, modern barcode without border
   try {
     // Modern barcode - sadece dikey çizgiler, çerçeve yok
-    doc.setDrawColor(0, 0, 0);
+    doc.setDrawColor(...PDF_STYLE.colors.gray);
     
     const barcodeStartX = x + 5;
     const barcodeEndX = x + maxWidth - 5;
@@ -502,7 +502,7 @@ export default function DailyTripReportApp(){
   const [isIncognito, setIsIncognito] = useState(false);
   const [carrier, setCarrier] = useState("TVM");
   const [terminal, setTerminal] = useState("Central Yard");
-  const [truck, setTruck] = useState("9496");
+  const [truck, setTruck] = useState("9499");
   const [date, setDate] = useState(todayLocal());
   const [driver, setDriver] = useState("Rukan Gocer");
   const [sig, setSig] = useState("");
@@ -626,7 +626,7 @@ export default function DailyTripReportApp(){
         if (obj && obj.date === todayLocal()) {
           setCarrier(obj.carrier || "TVM");
           setTerminal(obj.terminal || "Central Yard");
-          setTruck(obj.truck || "9496");
+          setTruck(obj.truck || "9499");
           setDate(obj.date || todayLocal());
           setDriver(obj.driver || "Rukan Gocer");
           setSig(obj.sig || "");
@@ -655,7 +655,14 @@ export default function DailyTripReportApp(){
     setExtraLines(l => {
       if (l.length >= NUM_ROWS) return l;
       const newDetail = { trailer: "", fromLoc: "", toLoc: "", dispatch: "", ldmt: "", blno: "", weight: "" };
-      return [...l, newDetail];
+      const updated = [...l, newDetail];
+      
+      // If this is the first trip detail being added, automatically check Bill Lading and Del. Receipt
+      if (updated.length === 1) {
+        setPaperwork(['Bill Lading', 'Del. Receipt']);
+      }
+      
+      return updated;
     });
     setRows(r => {
       if (r.length >= NUM_ROWS) return r;
@@ -666,7 +673,51 @@ export default function DailyTripReportApp(){
       return newRows;
     });
   };
-  const setExtraLine = (i, patch) => setExtraLines(l => l.map((row, idx) => idx === i ? { ...row, ...patch } : row));
+  // Auto-fill logic based on bill number
+  const getAutoFillFromBillNo = (blno) => {
+    if (!blno || !String(blno).trim()) {
+      return { fromLoc: "", toLoc: "", prov: null, hwys: [] };
+    }
+    const firstChar = String(blno).charAt(0);
+    if (firstChar === '1') {
+      return {
+        fromLoc: 'Wap',
+        toLoc: 'Cosma',
+        prov: { label: 'Ontario', value: 'on' },
+        hwys: [{ label: 'HWY 401' }, { label: 'HWY 3' }]
+      };
+    } else if (firstChar === '8') {
+      return {
+        fromLoc: 'Cosma',
+        toLoc: 'Wap',
+        prov: { label: 'Ontario', value: 'on' },
+        hwys: [{ label: 'HWY 3' }, { label: 'HWY 401' }]
+      };
+    }
+    return { fromLoc: "", toLoc: "", prov: null, hwys: [] };
+  };
+
+  const setExtraLine = (i, patch) => setExtraLines(l => l.map((row, idx) => {
+    if (idx !== i) return row;
+    const updated = { ...row, ...patch };
+    
+    // If bill number changed, auto-fill or reset route fields
+    if (patch.hasOwnProperty('blno')) {
+      const autoFill = getAutoFillFromBillNo(patch.blno);
+      // Always update from/to based on bill number (empty if bill is cleared)
+      updated.fromLoc = autoFill.fromLoc;
+      updated.toLoc = autoFill.toLoc;
+      
+      // Update corresponding trip line province and highways
+      setRow(i, {
+        prov: autoFill.prov || null,
+        hwys: autoFill.hwys || []
+      });
+    }
+    
+    return updated;
+  }));
+
   const removeExtraLine = (i) => {
     setExtraLines(l => l.filter((_, idx) => idx !== i));
     setRows(r => {
@@ -737,7 +788,7 @@ export default function DailyTripReportApp(){
       doc.setFontSize(PDF_STYLE.header.fieldValueSize);
       doc.text(carrier||'', col1X, y + 14);
       doc.setLineWidth(PDF_STYLE.header.underlineWidth);
-      doc.setDrawColor(...PDF_STYLE.colors.black);
+      doc.setDrawColor(...PDF_STYLE.colors.gray);
       doc.line(col1X, y + 18, col2X - 20, y + 18);
       
       // Terminal
@@ -854,29 +905,36 @@ export default function DailyTripReportApp(){
             cellPadding: PDF_STYLE.table.cellPadding, 
             halign: 'left',  // Left align like FormPreview
             valign: 'middle', 
-            lineColor: PDF_STYLE.colors.black,  // Pure black borders
+            fillColor: PDF_STYLE.colors.white,  // Default white background
+            lineColor: PDF_STYLE.colors.gray,  // Modern gray borders
             lineWidth: PDF_STYLE.table.lineWidth, 
             textColor: PDF_STYLE.colors.black,  // Black text
             minCellHeight: rowMinH, 
             overflow: 'linebreak' 
           },
           headStyles: { 
-            fillColor: PDF_STYLE.colors.headerBg,  // Light gray header
+            fillColor: PDF_STYLE.colors.white,  // White header background
             textColor: PDF_STYLE.colors.black,     // Black text on gray
-            lineColor: PDF_STYLE.colors.black, 
+            lineColor: PDF_STYLE.colors.gray, 
             lineWidth: PDF_STYLE.table.lineWidth, 
             fontStyle: 'bold', 
             minCellHeight: rowMinH,
             halign: 'left'  // Left align headers too
           },
+          bodyStyles: {
+            fillColor: PDF_STYLE.colors.white,  // White background for all body cells
+            lineColor: PDF_STYLE.colors.gray,
+            lineWidth: PDF_STYLE.table.lineWidth,
+            textColor: PDF_STYLE.colors.black,
+          },
           columnStyles: {
-            0: { cellWidth: tableWidth * 0.12 }, // TRAILER NO
-            1: { cellWidth: tableWidth * 0.15 }, // FROM
-            2: { cellWidth: tableWidth * 0.15 }, // TO
-            3: { cellWidth: tableWidth * 0.15 }, // DISPATCH NO
-            4: { cellWidth: tableWidth * 0.1 },  // LD/MT
-            5: { cellWidth: tableWidth * 0.15 }, // B/L NO
-            6: { cellWidth: tableWidth * 0.18 }, // WEIGHT
+            0: { cellWidth: tableWidth * 0.12, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // TRAILER NO
+            1: { cellWidth: tableWidth * 0.15, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // FROM
+            2: { cellWidth: tableWidth * 0.15, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // TO
+            3: { cellWidth: tableWidth * 0.15, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // DISPATCH NO
+            4: { cellWidth: tableWidth * 0.1, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black },  // LD/MT
+            5: { cellWidth: tableWidth * 0.15, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // B/L NO
+            6: { cellWidth: tableWidth * 0.18, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // WEIGHT
           },
           pageBreak: 'avoid',
           rowPageBreak: 'avoid',
@@ -911,39 +969,46 @@ export default function DailyTripReportApp(){
           cellPadding:PDF_STYLE.table.cellPadding,
           halign:'left',  // Left align like FormPreview
           valign:'middle',
-          lineColor:PDF_STYLE.colors.black,  // Pure black borders
+          fillColor:PDF_STYLE.colors.white,  // Default white background
+          lineColor:PDF_STYLE.colors.gray,  // Modern gray borders
           lineWidth:PDF_STYLE.table.lineWidth,
           textColor:PDF_STYLE.colors.black,  // Black text
           minCellHeight: rowMinH,
           overflow: 'linebreak'
         },
         headStyles:{
-          fillColor:PDF_STYLE.colors.headerBg,  // Light gray header
+          fillColor:PDF_STYLE.colors.white,  // White header background
           textColor:PDF_STYLE.colors.black,     // Black text on gray
-          lineColor:PDF_STYLE.colors.black,
+          lineColor:PDF_STYLE.colors.gray,
           lineWidth:PDF_STYLE.table.lineWidth,
           fontStyle:'bold', 
           minCellHeight: rowMinH,
           halign:'left'  // Left align headers
         },
+        bodyStyles: {
+          fillColor: PDF_STYLE.colors.white,  // White background for all body cells
+          lineColor: PDF_STYLE.colors.gray,
+          lineWidth: PDF_STYLE.table.lineWidth,
+          textColor: PDF_STYLE.colors.black,
+        },
         footStyles:{
-          fillColor: [240,240,240],
+          fillColor: PDF_STYLE.colors.white,
           textColor: PDF_STYLE.colors.black,
           fontStyle: 'bold',
-          lineColor: PDF_STYLE.colors.black,
+          lineColor: PDF_STYLE.colors.gray,
           lineWidth: PDF_STYLE.table.lineWidth,
           halign: 'left'
         },
         columnStyles:{
-          0: { cellWidth: tableWidth * 0.08 }, // DATE
-          1: { cellWidth: tableWidth * 0.1 },  // PROVINCE
-          2: { cellWidth: tableWidth * 0.15 }, // HIGHWAY USED
-          3: { cellWidth: tableWidth * 0.12 }, // ODOMETER BEGIN
-          4: { cellWidth: tableWidth * 0.12 }, // ODOMETER END
-          5: { cellWidth: tableWidth * 0.12 }, // KM NON-TOLL
-          6: { cellWidth: tableWidth * 0.1 },  // KM TOLL
-          7: { cellWidth: tableWidth * 0.08 }, // LITERS
-          8: { cellWidth: tableWidth * 0.13 }, // FUEL VENDOR
+          0: { cellWidth: tableWidth * 0.08, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // DATE
+          1: { cellWidth: tableWidth * 0.1, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black },  // PROVINCE
+          2: { cellWidth: tableWidth * 0.15, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // HIGHWAY USED
+          3: { cellWidth: tableWidth * 0.12, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // ODOMETER BEGIN
+          4: { cellWidth: tableWidth * 0.12, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // ODOMETER END
+          5: { cellWidth: tableWidth * 0.12, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // KM NON-TOLL
+          6: { cellWidth: tableWidth * 0.1, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black },  // KM TOLL
+          7: { cellWidth: tableWidth * 0.08, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // LITERS
+          8: { cellWidth: tableWidth * 0.13, fillColor: PDF_STYLE.colors.white, textColor: PDF_STYLE.colors.black }, // FUEL VENDOR
         },
         pageBreak: 'avoid',
         rowPageBreak: 'avoid',
@@ -988,7 +1053,7 @@ export default function DailyTripReportApp(){
         const isChecked = paperwork.includes(item);
         
         // Draw checkbox
-        doc.setDrawColor(...PDF_STYLE.colors.black);
+        doc.setDrawColor(...PDF_STYLE.colors.gray);
         doc.setLineWidth(1);
         doc.rect(checkboxX, checkboxY - checkboxSize, checkboxSize, checkboxSize);
         
@@ -1102,7 +1167,7 @@ export default function DailyTripReportApp(){
       localStorage.removeItem(LS_KEY);
       setCarrier("TVM");
       setTerminal("Central Yard");
-      setTruck("9496");
+      setTruck("9499");
       setDate(todayLocal());
       setDriver("Rukan Gocer");
       setSig("");
@@ -1396,13 +1461,7 @@ export default function DailyTripReportApp(){
           </div>
         </div>
 
-        {/* Trip Lines section (linked to Trip Details, display only) */}
-        <div className="rounded-2xl border border-dashed p-4 mb-6 bg-white">
-          <div className="mb-1 flex items-center justify-between">
-            <div className="text-sm font-medium">Trip Lines</div>
-          </div>
-          <div className="text-sm text-gray-500">Each Trip Line now appears under its corresponding Trip Detail above.</div>
-        </div>
+
 
         <div>
           <div className="mb-2 text-sm font-medium">PAPERWORK ATTACHED</div>
