@@ -1041,7 +1041,7 @@ export default function DailyTripReportApp(){
         // Limit notes display to fixed area
         const maxNotesLines = 5;
         const displayNotes = splitNotes.slice(0, maxNotesLines);
-        doc.text(displayNotes, M, notesTopY + 7);
+        doc.text(displayNotes, M, notesTopY + 12);
         
         // Divider line - only show if there are notes
         dividerY = notesTopY - 8;
