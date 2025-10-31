@@ -521,6 +521,7 @@ export default function DailyTripReportApp(){
   
   // Notification/Toast state
   const [toast, setToast] = useState(null);
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   
   // Show toast notification
   const showNotification = (message, type = 'info', duration = 3000) => {
@@ -655,6 +656,22 @@ export default function DailyTripReportApp(){
       }
     } catch {}
     didRestore.current = true;
+  }, []);
+
+  // Show one-time update notification on first launch
+  useEffect(() => {
+    const updateNotificationKey = 'tripReportUpdateNotificationShown_v1';
+    const hasShownNotification = localStorage.getItem(updateNotificationKey);
+    
+    if (!hasShownNotification) {
+      // Mark notification as shown
+      localStorage.setItem(updateNotificationKey, 'true');
+      
+      // Show the notification after a short delay for better UX
+      setTimeout(() => {
+        setShowUpdateNotification(true);
+      }, 500);
+    }
   }, []);
 
   // Save to localStorage whenever relevant state changes
@@ -1239,6 +1256,48 @@ export default function DailyTripReportApp(){
           {toast.message}
         </div>
       )}
+      
+      {/* Update Notification Modal - One-time on first launch */}
+      {showUpdateNotification && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">✨</span>
+              <h3 className="text-xl font-bold text-gray-900">What's New!</h3>
+            </div>
+            <div className="text-gray-700 text-sm space-y-4 mb-6">
+              <p className="flex items-start gap-2">
+                <span className="text-lg">📍</span>
+                <span><strong>Better Button Layout:</strong> The "Add Trip" button now appears below each added trip, while "Import" and "Export" buttons have been moved to the bottom of the page for easier access</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-lg">⚡</span>
+                <span><strong>Auto-scroll Feature:</strong> When you click "Add Trip," the new trip automatically scrolls into view so you can start filling it right away</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-lg">📱</span>
+                <span><strong>Mobile Optimized:</strong> Improved responsive design for better experience on all devices</span>
+              </p>
+            </div>
+            <button
+              onClick={() => setShowUpdateNotification(false)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors mb-3"
+            >
+              Got it! 👍
+            </button>
+            <div className="pt-4 border-t border-gray-200 text-center">
+              <p className="text-xs text-gray-600 mb-2">Questions or feedback?</p>
+              <a
+                href="mailto:rukanca@gmail.com?subject=Daily Trip Report Feedback"
+                className="text-blue-500 hover:text-blue-600 text-sm font-medium underline"
+              >
+                📧 rukanca@gmail.com
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="card">
         <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
           <span role="img" aria-label="Warning">⚠️</span>
