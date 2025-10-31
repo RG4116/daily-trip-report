@@ -523,6 +523,14 @@ export default function DailyTripReportApp(){
   const [toast, setToast] = useState(null);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   
+  // Driver Profile Selection state
+  const [showDriverSelect, setShowDriverSelect] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState('');
+  const [selectedTruck, setSelectedTruck] = useState('');
+  const driverProfileKey = 'tripReportDriverProfile';
+  const driverOptions = ['Rukan Gocer', 'Jesse Middleton'];
+  const truckOptions = ['9496', '9499'];
+  
   // Show toast notification
   const showNotification = (message, type = 'info', duration = 3000) => {
     setToast({ message, type, id: Date.now() });
@@ -630,6 +638,38 @@ export default function DailyTripReportApp(){
     detectIncognito().then(setIsIncognito);
   }, []);
 
+  // Load driver profile from localStorage
+  useEffect(() => {
+    const savedProfile = localStorage.getItem(driverProfileKey);
+    if (savedProfile) {
+      try {
+        const profile = JSON.parse(savedProfile);
+        setDriver(profile.driver);
+        setTruck(profile.truck);
+      } catch {
+        // If profile is corrupted, show selection modal
+        setShowDriverSelect(true);
+      }
+    } else {
+      // No profile saved, show selection modal
+      setShowDriverSelect(true);
+    }
+  }, []);
+
+  // Save driver profile
+  const saveDriverProfile = () => {
+    if (!selectedDriver.trim() || !selectedTruck.trim()) {
+      showNotification('❌ Please select both driver name and truck number', 'error', 3000);
+      return;
+    }
+    const profile = { driver: selectedDriver, truck: selectedTruck };
+    localStorage.setItem(driverProfileKey, JSON.stringify(profile));
+    setDriver(selectedDriver);
+    setTruck(selectedTruck);
+    setShowDriverSelect(false);
+    showNotification('✅ Driver profile saved!', 'success');
+  };
+
   // Restore saved data, migrating single hwy -> hwys[] if needed
   useEffect(() => {
     if (didRestore.current) return;
@@ -660,28 +700,7 @@ export default function DailyTripReportApp(){
 
   // Show one-time update notification on first launch
   useEffect(() => {
-    const updateNotificationKey = 'tripReportUpdateNotificationShown_v1';
-    const lastShownTime = localStorage.getItem(updateNotificationKey);
-    const now = Date.now();
-    const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
-    
-    // Check if notification has been shown and if 24 hours have passed
-    if (!lastShownTime) {
-      // First time - show notification
-      localStorage.setItem(updateNotificationKey, String(now));
-      setTimeout(() => {
-        setShowUpdateNotification(true);
-      }, 500);
-    } else {
-      const lastTime = parseInt(lastShownTime, 10);
-      if (now - lastTime > twentyFourHoursInMs) {
-        // More than 24 hours have passed - show notification again
-        localStorage.setItem(updateNotificationKey, String(now));
-        setTimeout(() => {
-          setShowUpdateNotification(true);
-        }, 500);
-      }
-    }
+    // Update notification disabled
   }, []);
 
   // Save to localStorage whenever relevant state changes
@@ -1267,8 +1286,59 @@ export default function DailyTripReportApp(){
         </div>
       )}
       
-      {/* Update Notification Modal - One-time on first launch */}
-      {showUpdateNotification && (
+      {/* Driver Profile Selection Modal */}
+      {showDriverSelect && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-3xl">👤</span>
+              <h3 className="text-2xl font-bold text-gray-900">Select Your Profile</h3>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+              <p className="text-sm text-blue-900">
+                <strong>Note:</strong> Once you select a driver and truck, they will remain registered until you change them again.
+              </p>
+            </div>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Driver Name</label>
+                <select
+                  value={selectedDriver}
+                  onChange={(e) => setSelectedDriver(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Choose your name...</option>
+                  {[...driverOptions].sort().map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Truck Number</label>
+                <select
+                  value={selectedTruck}
+                  onChange={(e) => setSelectedTruck(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Choose your truck...</option>
+                  {[...truckOptions].sort().map((truck) => (
+                    <option key={truck} value={truck}>{truck}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={saveDriverProfile}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Update Notification Modal - Disabled */}
+      {false && showUpdateNotification && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -1319,8 +1389,15 @@ export default function DailyTripReportApp(){
             You are using Private/Incognito mode. Your trip data will not be saved after you close this window.
           </div>
         )}
-        <div className="border-b p-4">
+        <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Daily Fuel / Trip Report</h2>
+          <button
+            onClick={() => setShowDriverSelect(true)}
+            className="text-sm px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-2 transition-colors"
+            title="Change driver profile"
+          >
+            <span>👤</span> Change Driver
+          </button>
         </div>
         {(!isFormValidForExport && validationErrors.length>0) && (
           <div className="mx-4 mt-2 rounded-lg bg-red-100 border border-red-300 p-3 text-red-800 text-xs space-y-1">
