@@ -745,7 +745,7 @@ export default function DailyTripReportApp(){
   // Auto-fill logic based on bill number
   const getAutoFillFromBillNo = (blno) => {
     if (!blno || !String(blno).trim()) {
-      return { fromLoc: "", toLoc: "", prov: null, hwys: [] };
+      return { fromLoc: "", toLoc: "", prov: null, hwys: [], weight: "" };
     }
     const firstChar = String(blno).charAt(0);
     if (firstChar === '1') {
@@ -753,17 +753,19 @@ export default function DailyTripReportApp(){
         fromLoc: 'Wap',
         toLoc: 'Cosma',
         prov: { label: 'Ontario', value: 'on' },
-        hwys: [{ label: 'HWY 401' }, { label: 'HWY 3' }]
+        hwys: [{ label: 'HWY 401' }, { label: 'HWY 3' }],
+        weight: '20000'
       };
     } else if (firstChar === '8') {
       return {
         fromLoc: 'Cosma',
         toLoc: 'Wap',
         prov: { label: 'Ontario', value: 'on' },
-        hwys: [{ label: 'HWY 3' }, { label: 'HWY 401' }]
+        hwys: [{ label: 'HWY 3' }, { label: 'HWY 401' }],
+        weight: ''
       };
     }
-    return { fromLoc: "", toLoc: "", prov: null, hwys: [] };
+    return { fromLoc: "", toLoc: "", prov: null, hwys: [], weight: "" };
   };
 
   const setExtraLine = (i, patch) => setExtraLines(l => l.map((row, idx) => {
@@ -776,6 +778,7 @@ export default function DailyTripReportApp(){
       // Always update from/to based on bill number (empty if bill is cleared)
       updated.fromLoc = autoFill.fromLoc;
       updated.toLoc = autoFill.toLoc;
+      updated.weight = autoFill.weight;
       
       // Update corresponding trip line province and highways
       setRow(i, {
