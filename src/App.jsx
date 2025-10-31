@@ -664,6 +664,15 @@ export default function DailyTripReportApp(){
         setPaperwork(['Bill Lading', 'Del. Receipt']);
       }
       
+      // Scroll the newly added trip into view
+      setTimeout(() => {
+        const tripDetails = document.querySelectorAll('details[open]');
+        if (tripDetails.length > 0) {
+          const lastTrip = tripDetails[tripDetails.length - 1];
+          lastTrip.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 0);
+      
       return updated;
     });
     setRows(r => {
@@ -1216,32 +1225,8 @@ export default function DailyTripReportApp(){
             You are using Private/Incognito mode. Your trip data will not be saved after you close this window.
           </div>
         )}
-        <div className="border-b p-4 flex items-center justify-between">
+        <div className="border-b p-4">
           <h2 className="text-xl font-semibold">Daily Fuel / Trip Report</h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExport}
-              className={`px-3 py-1 rounded text-sm ${isFormValidForExport? 'bg-blue-500 text-white hover:bg-blue-600':'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
-              title="Export current form data to JSON file"
-              disabled={!isFormValidForExport}
-            >
-              📤 Export
-            </button>
-            <button
-              onClick={triggerFileInput}
-              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-              title="Import form data from JSON file"
-            >
-              📥 Import
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              className="hidden"
-            />
-          </div>
         </div>
         {(!isFormValidForExport && validationErrors.length>0) && (
           <div className="mx-4 mt-2 rounded-lg bg-red-100 border border-red-300 p-3 text-red-800 text-xs space-y-1">
@@ -1337,36 +1322,8 @@ export default function DailyTripReportApp(){
             <div className="text-sm font-medium">Trip Details (max {NUM_ROWS})</div>
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-500">Total added: <span className="font-semibold text-blue-600">{extraLines.length}</span></span>
-              {extraLines.length < NUM_ROWS && (
-                <button
-                  type="button"
-                  onClick={e => {
-                    const btn = e.currentTarget;
-                    btn.classList.add('clicked');
-                    setTimeout(() => btn.classList.remove('clicked'), 350);
-                    addExtraLine();
-                  }}
-                  className="btn-main px-4 py-3 text-base flex items-center gap-2 relative overflow-hidden"
-                  title="Add New Trip Detail"
-                  aria-label="Add New Trip Detail"
-                  style={{ position: 'relative' }}
-                >
-                  <span className="text-xl">➕</span> <span>Add Trip Detail</span>
-                  <style>{`
-                    .clicked {
-                      animation: rippleBtn 0.35s linear;
-                    }
-                    @keyframes rippleBtn {
-                      0% { box-shadow: 0 0 0 0 #3b82f6aa; }
-                      50% { box-shadow: 0 0 0 12px #3b82f633; }
-                      100% { box-shadow: 0 0 0 0 #3b82f600; }
-                    }
-                  `}</style>
-                </button>
-              )}
             </div>
           </div>
-      {/* Floating Action Button removed as requested. Only inline add button remains. */}
 
           <div className="space-y-2">
             {extraLines.length===0 && (
@@ -1386,7 +1343,9 @@ export default function DailyTripReportApp(){
                       type="button"
                       onClick={e => {
                         e.preventDefault();
-                        removeExtraLine(i);
+                        if (window.confirm('Are you sure you want to delete this trip detail?')) {
+                          removeExtraLine(i);
+                        }
                       }}
                       className="px-2 py-1 text-sm flex items-center gap-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 border border-gray-300 transition-shadow"
                       style={{ boxShadow: '0 1px 4px rgba(120,130,145,0.06)' }}
@@ -1485,6 +1444,36 @@ export default function DailyTripReportApp(){
               </details>
             )})}
           </div>
+
+          {/* Add Trip Detail Button - Positioned at bottom of Trip Details section */}
+          {extraLines.length < NUM_ROWS && (
+            <div className="mt-4 pt-4 border-t border-dashed border-gray-300 flex justify-center">
+              <button
+                type="button"
+                onClick={e => {
+                  const btn = e.currentTarget;
+                  btn.classList.add('clicked');
+                  setTimeout(() => btn.classList.remove('clicked'), 350);
+                  addExtraLine();
+                }}
+                className="btn-main px-6 py-3 text-base flex items-center gap-2 relative overflow-hidden shadow-md hover:shadow-lg transition-shadow rounded-lg"
+                title="Add New Trip Detail"
+                aria-label="Add New Trip Detail"
+              >
+                <span className="text-xl">➕</span> <span>{extraLines.length > 0 ? `Add Trip #${extraLines.length + 1}` : 'Add Trip Detail'}</span>
+                <style>{`
+                  .clicked {
+                    animation: rippleBtn 0.35s linear;
+                  }
+                  @keyframes rippleBtn {
+                    0% { box-shadow: 0 0 0 0 #3b82f6aa; }
+                    50% { box-shadow: 0 0 0 12px #3b82f633; }
+                    100% { box-shadow: 0 0 0 0 #3b82f600; }
+                  }
+                `}</style>
+              </button>
+            </div>
+          )}
         </div>
 
 
@@ -1546,20 +1535,44 @@ export default function DailyTripReportApp(){
           {/* Signature certification checkbox removed as requested */}
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button type="button" onClick={downloadPdf} disabled={!isFormValidForExport} className={`rounded-md px-4 py-2 border border-gray-300 flex items-center gap-2 ${isFormValidForExport? 'text-gray-800 hover:bg-gray-100':'text-gray-400 cursor-not-allowed bg-gray-100'}`}>
+        <div className="flex flex-wrap gap-2 justify-start">
+          <button type="button" onClick={downloadPdf} disabled={!isFormValidForExport} className={`rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 border border-gray-300 flex items-center gap-1 sm:gap-2 ${isFormValidForExport? 'text-gray-800 hover:bg-gray-100':'text-gray-400 cursor-not-allowed bg-gray-100'}`}>
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Download PDF">📥</span>
-            <span>Download PDF</span>
+            <span>Download</span>
           </button>
-          <button type="button" onClick={sendByEmail} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className={`rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 border flex items-center gap-1 sm:gap-2 ${isFormValidForExport? 'bg-blue-500 text-white hover:bg-blue-600 border-blue-600':'text-gray-400 cursor-not-allowed bg-gray-100 border-gray-300'}`}
+            title="Export current form data to JSON file"
+            disabled={!isFormValidForExport}
+          >
+            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Export">📤</span>
+            <span>Export</span>
+          </button>
+          <button
+            onClick={triggerFileInput}
+            className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 bg-green-500 text-white hover:bg-green-600 border border-green-600 flex items-center gap-1 sm:gap-2"
+            title="Import form data from JSON file"
+          >
+            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Import">📂</span>
+            <span>Import</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            className="hidden"
+          />
+          <button type="button" onClick={openPdf} className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-1 sm:gap-2">
+            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Open PDF in New Tab">📖</span>
+            <span>Open PDF</span>
+          </button>
+          <button type="button" onClick={sendByEmail} className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-1 sm:gap-2">
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Send by Email">✉️</span>
-            <span>Send by Email</span>
+            <span>Email</span>
           </button>
-          <button type="button" onClick={openPdf} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
-            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Open PDF in New Tab">🗔</span>
-            <span>Open PDF in New Tab</span>
-          </button>
-          <button type="button" onClick={resetAll} className="rounded-md px-4 py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-2">
+          <button type="button" onClick={resetAll} className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-1 sm:gap-2">
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Reset">♻️</span>
             <span>Reset</span>
           </button>
