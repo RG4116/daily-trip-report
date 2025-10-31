@@ -519,6 +519,15 @@ export default function DailyTripReportApp(){
   const [importSuccess, setImportSuccess] = useState('');
   const fileInputRef = useRef(null);
   
+  // Notification/Toast state
+  const [toast, setToast] = useState(null);
+  
+  // Show toast notification
+  const showNotification = (message, type = 'info', duration = 3000) => {
+    setToast({ message, type, id: Date.now() });
+    setTimeout(() => setToast(null), duration);
+  };
+  
   // NEW: Validation errors (all fields except liters and fuel vendor required)
   const validationErrors = useMemo(()=>{
     const errs = [];
@@ -566,11 +575,12 @@ export default function DailyTripReportApp(){
   // Export current form data (blocked if validation fails)
   const handleExport = () => {
     if(!isFormValidForExport){
-      alert('Eksik zorunlu alanlar var.\nZorunlu Alanlar:\n- Trip Detail: Trailer No, From, To, Dispatch No, Bill No, Weight\n- Trip Line: Date, Province, Highway, Odometer Begin/End, KM\n- Header: Carrier, Terminal, Truck, Date, Driver\n\nMissing Required Fields:\n- ' + validationErrors.join('\n- '));
+      showNotification('❌ Please fill all required fields', 'error', 4000);
       return;
     }
     const currentData = { carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines };
     exportFormData(currentData);
+    showNotification('✅ Data exported successfully!', 'success');
   };
   
   // Import form data
@@ -596,10 +606,12 @@ export default function DailyTripReportApp(){
         setExtraLines(importedData.extraLines || []);
         
         setImportSuccess('Data imported successfully!');
+        showNotification('✅ Data imported successfully!', 'success');
         setTimeout(() => setImportSuccess(''), 3000);
       },
       (error) => {
         setImportError(error);
+        showNotification('❌ Import failed: ' + error, 'error', 5000);
         setTimeout(() => setImportError(''), 5000);
       }
     );
@@ -1155,7 +1167,7 @@ export default function DailyTripReportApp(){
 
   const downloadPdf = async () => {
     if(!isFormValidForExport){
-      alert('Eksik zorunlu alanlar var.\nZorunlu Alanlar:\n- Trip Detail: Trailer No, From, To, Dispatch No, Bill No, Weight\n- Trip Line: Date, Province, Highway, Odometer Begin/End, KM\n- Header: Carrier, Terminal, Truck, Date, Driver\n\nMissing Required Fields:\n- ' + validationErrors.join('\n- '));
+      showNotification('❌ Please fill all required fields', 'error', 4000);
       return;
     }
     if (window.confirm('⚠️ Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
@@ -1169,10 +1181,11 @@ export default function DailyTripReportApp(){
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        showNotification('📥 PDF downloaded successfully!', 'success');
         setTimeout(() => URL.revokeObjectURL(url), 60000);
       } catch (error) {
         console.error("Failed to download PDF:", error);
-        alert("Could not generate PDF. Please try again.");
+        showNotification('❌ Failed to download PDF', 'error', 4000);
       }
     }
   };
@@ -1190,10 +1203,11 @@ export default function DailyTripReportApp(){
         // fallback: same tab
         window.location.href = url;
       }
+      showNotification('📖 PDF opened in new tab', 'success');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
       console.error("Failed to open PDF:", error);
-      alert("Could not generate PDF. Please try again.");
+      showNotification('❌ Failed to open PDF', 'error', 4000);
     }
   };
   const resetAll = () => {
@@ -1209,11 +1223,22 @@ export default function DailyTripReportApp(){
       setExtraLines([]);
       setRows([]);
       setNotes("");
+      showNotification('♻️ Form reset successfully', 'info');
     }
   };
 
   return (
     <div className="mx-auto max-w-5xl p-4">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 px-4 py-3 rounded-lg text-white shadow-lg animate-pulse z-50 ${
+          toast.type === 'success' ? 'bg-green-500' : 
+          toast.type === 'error' ? 'bg-red-500' : 
+          'bg-blue-500'
+        }`}>
+          {toast.message}
+        </div>
+      )}
       <div className="card">
         <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
           <span role="img" aria-label="Warning">⚠️</span>
