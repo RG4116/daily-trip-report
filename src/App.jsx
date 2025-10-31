@@ -661,16 +661,26 @@ export default function DailyTripReportApp(){
   // Show one-time update notification on first launch
   useEffect(() => {
     const updateNotificationKey = 'tripReportUpdateNotificationShown_v1';
-    const hasShownNotification = localStorage.getItem(updateNotificationKey);
+    const lastShownTime = localStorage.getItem(updateNotificationKey);
+    const now = Date.now();
+    const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
     
-    if (!hasShownNotification) {
-      // Mark notification as shown
-      localStorage.setItem(updateNotificationKey, 'true');
-      
-      // Show the notification after a short delay for better UX
+    // Check if notification has been shown and if 24 hours have passed
+    if (!lastShownTime) {
+      // First time - show notification
+      localStorage.setItem(updateNotificationKey, String(now));
       setTimeout(() => {
         setShowUpdateNotification(true);
       }, 500);
+    } else {
+      const lastTime = parseInt(lastShownTime, 10);
+      if (now - lastTime > twentyFourHoursInMs) {
+        // More than 24 hours have passed - show notification again
+        localStorage.setItem(updateNotificationKey, String(now));
+        setTimeout(() => {
+          setShowUpdateNotification(true);
+        }, 500);
+      }
     }
   }, []);
 
