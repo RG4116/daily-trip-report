@@ -1296,7 +1296,7 @@ export default function DailyTripReportApp(){
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
               <p className="text-sm text-blue-900">
-                <strong>Note:</strong> Once you select a driver and truck, they will remain registered until you change them again.
+                <strong>Note:</strong> Once you select a driver and truck, they will remain registered in this device until you change them again.
               </p>
             </div>
             <div className="space-y-4 mb-6">
