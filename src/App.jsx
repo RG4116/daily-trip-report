@@ -713,16 +713,6 @@ export default function DailyTripReportApp(){
 
   // Save driver profile and verify PIN
   const saveDriverProfile = () => {
-    // Check if account is locked
-    if (accountLockedUntil !== null) {
-      const now = Date.now();
-      if (now < accountLockedUntil) {
-        const remainingSeconds = Math.ceil((accountLockedUntil - now) / 1000);
-        setPinError(`🔒 Account locked for ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''}`);
-        return;
-      }
-    }
-
     if (!selectedDriver.trim() || !selectedTruck.trim()) {
       showNotification('❌ Please select both driver name and truck number', 'error', 3000);
       return;
@@ -736,9 +726,49 @@ export default function DailyTripReportApp(){
       return;
     }
 
-    // PIN input is shown, verify the entered PIN
-    const expectedHash = DRIVER_PIN_HASHES[selectedDriver];
-    const enteredHash = hashPin(enteredPin);
+    // PIN input is showing but we don't need a button click - auto-verify happens via useEffect
+    // This function now only handles the "Continue" button
+  };
+
+  // Handle "Change Driver" button
+  const handleChangeDriver = () => {
+    // Clear session flag but keep localStorage profile
+    sessionStorage.removeItem('tripReportPinVerified');
+    setIsPinVerified(false);
+    // Reset PIN input and show modal again
+    setShowPinInput(false);
+    setEnteredPin('');
+    setPinError('');
+    setFailedAttempts(0);
+    setAccountLockedUntil(null);
+    setShowDriverSelect(true);
+  };
+
+  // Auto-verify PIN when 6 digits are entered
+  useEffect(() => {
+    if (enteredPin.length === 6 && showPinInput && selectedDriver) {
+      // Auto-verify after a short delay for smooth UX
+      const timer = setTimeout(() => {
+        verifyPin(enteredPin, selectedDriver);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [enteredPin, showPinInput, selectedDriver]);
+
+  // PIN verification logic (extracted for reuse)
+  const verifyPin = (pin, driver) => {
+    // Check if account is locked
+    if (accountLockedUntil !== null) {
+      const now = Date.now();
+      if (now < accountLockedUntil) {
+        const remainingSeconds = Math.ceil((accountLockedUntil - now) / 1000);
+        setPinError(`🔒 Account locked for ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''}`);
+        return;
+      }
+    }
+
+    const expectedHash = DRIVER_PIN_HASHES[driver];
+    const enteredHash = hashPin(pin);
 
     if (enteredHash !== expectedHash) {
       const newFailedCount = failedAttempts + 1;
@@ -759,10 +789,9 @@ export default function DailyTripReportApp(){
     }
 
     // PIN is correct - save profile to localStorage and set session flag
-    const profile = { driver: selectedDriver, truck: selectedTruck };
+    const profile = { driver: driver, truck: selectedTruck };
     localStorage.setItem(driverProfileKey, JSON.stringify(profile));
-    setDriver(selectedDriver);
-    setTruck(selectedTruck);
+    setDriver(driver);
     setShowDriverSelect(false);
     
     // Set PIN verified flag in sessionStorage
@@ -777,20 +806,6 @@ export default function DailyTripReportApp(){
     setAccountLockedUntil(null);
     
     showNotification('✅ Driver authenticated!', 'success');
-  };
-
-  // Handle "Change Driver" button
-  const handleChangeDriver = () => {
-    // Clear session flag but keep localStorage profile
-    sessionStorage.removeItem('tripReportPinVerified');
-    setIsPinVerified(false);
-    // Reset PIN input and show modal again
-    setShowPinInput(false);
-    setEnteredPin('');
-    setPinError('');
-    setFailedAttempts(0);
-    setAccountLockedUntil(null);
-    setShowDriverSelect(true);
   };
   useEffect(() => {
     if (didRestore.current) return;
@@ -1764,12 +1779,13 @@ export default function DailyTripReportApp(){
               onClick={saveDriverProfile}
               disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
               className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
-                accountLockedUntil !== null && Date.now() < accountLockedUntil
+                accountLockedUntil !== null && Date.now() < accountLockedUntil || showPinInput
                   ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                   : 'bg-blue-500 hover:bg-blue-600 text-white'
               }`}
+              style={{ display: showPinInput ? 'none' : 'block' }}
             >
-              {showPinInput ? 'Verify PIN' : 'Continue'}
+              Continue
             </button>
             
             {/* Back button - Show only when PIN input is displayed */}
@@ -1780,7 +1796,7 @@ export default function DailyTripReportApp(){
                   setEnteredPin('');
                   setPinError('');
                 }}
-                className="w-full mt-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
               >
                 Back
               </button>
