@@ -1558,7 +1558,7 @@ export default function DailyTripReportApp(){
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Aligned Form Layout</h3>
                   <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
-                    Trailer No, Bill No, and Dispatch No are now perfectly aligned in the PDF layout for better organization.
+                    Trailer No, Bill No, and Dispatch No are now aligned in the UI. PDF is not affected.
                   </p>
                 </div>
               </div>
