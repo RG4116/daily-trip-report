@@ -542,7 +542,7 @@ export default function DailyTripReportApp(){
   const [pinError, setPinError] = useState('');
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [accountLockedUntil, setAccountLockedUntil] = useState(null);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(() => localStorage.getItem('dontShowWelcomeModal') !== 'true');
   const [isPinVerified, setIsPinVerified] = useState(() => sessionStorage.getItem('tripReportPinVerified') === 'true');
   const driverProfileKey = 'tripReportDriverProfile';
   const lockoutDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -1534,82 +1534,82 @@ export default function DailyTripReportApp(){
       
       {/* Welcome Modal - What's New */}
       {showWelcomeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md p-6 sm:p-8 max-h-[95vh] overflow-y-auto">
             
             {/* Title */}
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-1 sm:mb-2">
               What's New!
             </h2>
-            <p className="text-center text-gray-500 text-sm mb-6">
+            <p className="text-center text-gray-500 text-xs sm:text-sm mb-4 sm:mb-6">
               Latest updates to improve your workflow
             </p>
             
             {/* Divider */}
-            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-6"></div>
+            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-4 sm:mb-6"></div>
             
             {/* Feature List */}
-            <div className="space-y-4 mb-8">
+            <div className="space-y-2 sm:space-y-4 mb-6 sm:mb-8">
               {/* Feature 1 */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+              <div className="flex gap-2 sm:gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Aligned Form Layout</h3>
-                  <p className="text-gray-600 text-sm mt-1">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Aligned Form Layout</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
                     Trailer No, Bill No, and Dispatch No are now perfectly aligned in the PDF layout for better organization.
                   </p>
                 </div>
               </div>
               
               {/* Feature 2 */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+              <div className="flex gap-2 sm:gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Smart Plate Management</h3>
-                  <p className="text-gray-600 text-sm mt-1">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Smart Plate Management</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
                     Enter a trailer number and the plate automatically appears if it exists. Add and save new plates seamlessly.
                   </p>
                 </div>
               </div>
               
               {/* Feature 3 */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+              <div className="flex gap-2 sm:gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Secure PIN Login</h3>
-                  <p className="text-gray-600 text-sm mt-1">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Secure PIN Login</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
                     New 6-digit PIN code system with account lockout protection after 3 failed attempts.
                   </p>
                 </div>
               </div>
               
               {/* Feature 4 */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+              <div className="flex gap-2 sm:gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Mobile Optimized</h3>
-                  <p className="text-gray-600 text-sm mt-1">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Mobile Optimized</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
                     Improved responsive design and performance optimizations for seamless mobile experience.
                   </p>
                 </div>
               </div>
               
               {/* Feature 5 */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+              <div className="flex gap-2 sm:gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Flexible Weight Options</h3>
-                  <p className="text-gray-600 text-sm mt-1">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Flexible Weight Options</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
                     For Cosma loads, choose between weight options (12450 or 12997) for greater flexibility.
                   </p>
                 </div>
@@ -1617,18 +1617,34 @@ export default function DailyTripReportApp(){
             </div>
             
             {/* Divider */}
-            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-6"></div>
+            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-4 sm:mb-6"></div>
             
             {/* Close Button */}
             <button
               onClick={() => setShowWelcomeModal(false)}
-              className="w-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 hover:from-purple-600 hover:via-indigo-600 hover:to-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-2xl"
+              className="w-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 hover:from-purple-600 hover:via-indigo-600 hover:to-blue-600 text-white font-semibold py-2 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-2xl text-sm sm:text-base"
             >
               Get Started
             </button>
             
+            {/* Don't show again checkbox */}
+            <label className="flex items-center gap-2 mt-3 sm:mt-4 p-2 sm:p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+              <input
+                type="checkbox"
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    localStorage.setItem('dontShowWelcomeModal', 'true');
+                  } else {
+                    localStorage.removeItem('dontShowWelcomeModal');
+                  }
+                }}
+                className="w-4 h-4 accent-indigo-600"
+              />
+              <span className="text-xs sm:text-sm text-gray-700">Don't show again on this device</span>
+            </label>
+            
             {/* Footer */}
-            <p className="text-center text-gray-500 text-xs mt-4">
+            <p className="text-center text-gray-500 text-xs mt-3 sm:mt-4">
               Have questions? <a href="mailto:rukanca@gmail.com" className="text-indigo-600 hover:text-indigo-700 font-medium">Contact support</a>
             </p>
           </div>
