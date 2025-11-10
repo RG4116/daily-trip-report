@@ -543,6 +543,7 @@ export default function DailyTripReportApp(){
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [accountLockedUntil, setAccountLockedUntil] = useState(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [isPinVerified, setIsPinVerified] = useState(() => sessionStorage.getItem('tripReportPinVerified') === 'true');
   const driverProfileKey = 'tripReportDriverProfile';
   const lockoutDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
   const maxFailedAttempts = 3;
@@ -662,7 +663,7 @@ export default function DailyTripReportApp(){
     detectIncognito().then(setIsIncognito);
   }, []);
 
-  // Load driver profile from localStorage
+  // Load driver profile from localStorage on mount
   useEffect(() => {
     const savedProfile = localStorage.getItem(driverProfileKey);
     if (savedProfile) {
@@ -670,6 +671,12 @@ export default function DailyTripReportApp(){
         const profile = JSON.parse(savedProfile);
         setDriver(profile.driver);
         setTruck(profile.truck);
+        setSelectedDriver(profile.driver);
+        setSelectedTruck(profile.truck);
+        // If PIN is not verified yet, show PIN modal
+        if (!isPinVerified) {
+          setShowDriverSelect(true);
+        }
       } catch {
         // If profile is corrupted, show selection modal
         setShowDriverSelect(true);
@@ -704,7 +711,7 @@ export default function DailyTripReportApp(){
     return () => clearTimeout(timer);
   }, [accountLockedUntil]);
 
-  // Save driver profile
+  // Save driver profile and verify PIN
   const saveDriverProfile = () => {
     // Check if account is locked
     if (accountLockedUntil !== null) {
@@ -751,12 +758,16 @@ export default function DailyTripReportApp(){
       return;
     }
 
-    // PIN is correct, save profile and close modal
+    // PIN is correct - save profile to localStorage and set session flag
     const profile = { driver: selectedDriver, truck: selectedTruck };
     localStorage.setItem(driverProfileKey, JSON.stringify(profile));
     setDriver(selectedDriver);
     setTruck(selectedTruck);
     setShowDriverSelect(false);
+    
+    // Set PIN verified flag in sessionStorage
+    sessionStorage.setItem('tripReportPinVerified', 'true');
+    setIsPinVerified(true);
     
     // Reset PIN-related states
     setShowPinInput(false);
@@ -765,10 +776,22 @@ export default function DailyTripReportApp(){
     setFailedAttempts(0);
     setAccountLockedUntil(null);
     
-    showNotification('✅ Driver profile saved!', 'success');
+    showNotification('✅ Driver authenticated!', 'success');
   };
 
-  // Restore saved data, migrating single hwy -> hwys[] if needed
+  // Handle "Change Driver" button
+  const handleChangeDriver = () => {
+    // Clear session flag but keep localStorage profile
+    sessionStorage.removeItem('tripReportPinVerified');
+    setIsPinVerified(false);
+    // Reset PIN input and show modal again
+    setShowPinInput(false);
+    setEnteredPin('');
+    setPinError('');
+    setFailedAttempts(0);
+    setAccountLockedUntil(null);
+    setShowDriverSelect(true);
+  };
   useEffect(() => {
     if (didRestore.current) return;
     try {
@@ -1807,6 +1830,8 @@ export default function DailyTripReportApp(){
         </div>
       )}
       
+      {/* Main App - Only show if PIN is verified */}
+      {isPinVerified && (
       <div className="card">
         <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
           <span role="img" aria-label="Warning">⚠️</span>
@@ -1821,13 +1846,7 @@ export default function DailyTripReportApp(){
         <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Daily Fuel / Trip Report</h2>
           <button
-            onClick={() => {
-              setShowDriverSelect(true);
-              setShowPinInput(false);
-              setEnteredPin('');
-              setPinError('');
-              // Note: Keep failedAttempts and accountLockedUntil to maintain lockout across modal reopens
-            }}
+            onClick={handleChangeDriver}
             className="text-sm px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-2 transition-colors"
             title="Change driver profile"
           >
@@ -2422,6 +2441,7 @@ export default function DailyTripReportApp(){
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }
