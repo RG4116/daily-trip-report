@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./global.css";
 import { fetchTrailersFromSheet, saveTrailerToSheet, getPlateForTrailer, initializeTrailerData } from "./googleSheetsService";
 
-// Driver PIN hashes (base64 encoded - 6 digits)
+// Driver PIN hashes (base64 encoded - 4 digits)
 const DRIVER_PIN_HASHES = {
-  "Rukan Gocer": "MTExMTEx", // base64('111111')
-  "Jesse Middleton": "MjIyMjIy", // base64('222222')
+  "Rukan Gocer": "MTExMQ==", // base64('1111')
+  "Jesse Middleton": "MjIyMg==", // base64('2222')
 };
 
 // Helper function to hash PIN with base64
@@ -744,9 +744,9 @@ export default function DailyTripReportApp(){
     setShowDriverSelect(true);
   };
 
-  // Auto-verify PIN when 6 digits are entered
+  // Auto-verify PIN when 4 digits are entered
   useEffect(() => {
-    if (enteredPin.length === 6 && showPinInput && selectedDriver) {
+    if (enteredPin.length === 4 && showPinInput && selectedDriver) {
       // Auto-verify after a short delay for smooth UX
       const timer = setTimeout(() => {
         verifyPin(enteredPin, selectedDriver);
@@ -1584,7 +1584,7 @@ export default function DailyTripReportApp(){
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Secure PIN Login</h3>
                   <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
-                    New 6-digit PIN code system with account lockout protection after 3 failed attempts.
+                    New 4-digit PIN code system with account lockout protection after 3 failed attempts.
                   </p>
                 </div>
               </div>
@@ -1597,7 +1597,7 @@ export default function DailyTripReportApp(){
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Mobile Optimized</h3>
                   <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
-                    Improved responsive design and performance optimizations for seamless mobile experience.
+                    Improved responsive design and performance optimizations for user-friendly mobile experience.
                   </p>
                 </div>
               </div>
@@ -1610,7 +1610,7 @@ export default function DailyTripReportApp(){
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Flexible Weight Options</h3>
                   <p className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
-                    For Cosma loads, choose between weight options (12450 or 12997) for greater flexibility.
+                    For Cosma loads, choose between weight options (12450 or 12997).
                   </p>
                 </div>
               </div>
@@ -1707,12 +1707,12 @@ export default function DailyTripReportApp(){
               {/* PIN Input Field with On-Screen Numpad - Show only after Continue is clicked */}
               {showPinInput && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Enter 6-Digit PIN</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Enter 4-Digit PIN</label>
                   
                   {/* PIN Display */}
                   <div className="mb-4 p-4 bg-gray-50 border-2 border-gray-300 rounded-lg text-center">
                     <div className="text-3xl font-bold tracking-widest text-gray-800 font-mono">
-                      {'●'.repeat(enteredPin.length)}{'○'.repeat(6 - enteredPin.length)}
+                      {'●'.repeat(enteredPin.length)}{'○'.repeat(4 - enteredPin.length)}
                     </div>
                   </div>
                   
@@ -1723,7 +1723,7 @@ export default function DailyTripReportApp(){
                         key={num}
                         type="button"
                         onClick={() => {
-                          if (enteredPin.length < 6) {
+                          if (enteredPin.length < 4) {
                             setEnteredPin(enteredPin + num);
                             setPinError('');
                           }
@@ -1741,7 +1741,7 @@ export default function DailyTripReportApp(){
                     <button
                       type="button"
                       onClick={() => {
-                        if (enteredPin.length < 6) {
+                        if (enteredPin.length < 4) {
                           setEnteredPin(enteredPin + '0');
                           setPinError('');
                         }
