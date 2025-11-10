@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./global.css";
+import { fetchTrailersFromSheet, saveTrailerToSheet, getPlateForTrailer, initializeTrailerData } from "./googleSheetsService";
+
+// Driver PIN hashes (base64 encoded - 6 digits)
+const DRIVER_PIN_HASHES = {
+  "Rukan Gocer": "MTExMTEx", // base64('111111')
+  "Jesse Middleton": "MjIyMjIy", // base64('222222')
+};
+
+// Helper function to hash PIN with base64
+const hashPin = (pin) => btoa(pin);
 
 // Export/Import functions
 function exportFormData(data) {
@@ -527,9 +537,23 @@ export default function DailyTripReportApp(){
   const [showDriverSelect, setShowDriverSelect] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState('');
   const [selectedTruck, setSelectedTruck] = useState('');
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [enteredPin, setEnteredPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [accountLockedUntil, setAccountLockedUntil] = useState(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
   const driverProfileKey = 'tripReportDriverProfile';
+  const lockoutDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+  const maxFailedAttempts = 3;
   const driverOptions = ['Rukan Gocer', 'Jesse Middleton'];
   const truckOptions = ['9496', '9499'];
+
+  // Google Sheets - Plate management state (displayedPlates UI only, no cache)
+  const [displayedPlates, setDisplayedPlates] = useState({}); // { index: plateNo } - UI only, always fresh from Google Sheets
+  const [editingPlateIndex, setEditingPlateIndex] = useState(null);
+  const [addingPlateIndex, setAddingPlateIndex] = useState(null);
+  const [plateInput, setPlateInput] = useState('');
   
   // Show toast notification
   const showNotification = (message, type = 'info', duration = 3000) => {
@@ -656,17 +680,91 @@ export default function DailyTripReportApp(){
     }
   }, []);
 
+  // Check if account is locked and update lockout timer
+  useEffect(() => {
+    if (accountLockedUntil === null) return;
+
+    const now = Date.now();
+    if (now >= accountLockedUntil) {
+      // Lockout period has expired
+      setAccountLockedUntil(null);
+      setFailedAttempts(0);
+      setPinError('');
+      return;
+    }
+
+    // Still locked, set up a timer to check again
+    const timeRemaining = accountLockedUntil - now;
+    const timer = setTimeout(() => {
+      setAccountLockedUntil(null);
+      setFailedAttempts(0);
+      setPinError('');
+    }, timeRemaining);
+
+    return () => clearTimeout(timer);
+  }, [accountLockedUntil]);
+
   // Save driver profile
   const saveDriverProfile = () => {
+    // Check if account is locked
+    if (accountLockedUntil !== null) {
+      const now = Date.now();
+      if (now < accountLockedUntil) {
+        const remainingSeconds = Math.ceil((accountLockedUntil - now) / 1000);
+        setPinError(`🔒 Account locked for ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''}`);
+        return;
+      }
+    }
+
     if (!selectedDriver.trim() || !selectedTruck.trim()) {
       showNotification('❌ Please select both driver name and truck number', 'error', 3000);
       return;
     }
+
+    // If PIN input is not shown, show it first
+    if (!showPinInput) {
+      setShowPinInput(true);
+      setPinError('');
+      setEnteredPin('');
+      return;
+    }
+
+    // PIN input is shown, verify the entered PIN
+    const expectedHash = DRIVER_PIN_HASHES[selectedDriver];
+    const enteredHash = hashPin(enteredPin);
+
+    if (enteredHash !== expectedHash) {
+      const newFailedCount = failedAttempts + 1;
+      setFailedAttempts(newFailedCount);
+
+      if (newFailedCount >= maxFailedAttempts) {
+        // Lock the account
+        const lockUntil = Date.now() + lockoutDuration;
+        setAccountLockedUntil(lockUntil);
+        setPinError('🔒 Account locked for 5 minutes due to too many failed attempts');
+        setEnteredPin('');
+      } else {
+        const attemptsRemaining = maxFailedAttempts - newFailedCount;
+        setPinError(`❌ Incorrect PIN (${attemptsRemaining} attempt${attemptsRemaining !== 1 ? 's' : ''} remaining)`);
+        setEnteredPin('');
+      }
+      return;
+    }
+
+    // PIN is correct, save profile and close modal
     const profile = { driver: selectedDriver, truck: selectedTruck };
     localStorage.setItem(driverProfileKey, JSON.stringify(profile));
     setDriver(selectedDriver);
     setTruck(selectedTruck);
     setShowDriverSelect(false);
+    
+    // Reset PIN-related states
+    setShowPinInput(false);
+    setEnteredPin('');
+    setPinError('');
+    setFailedAttempts(0);
+    setAccountLockedUntil(null);
+    
     showNotification('✅ Driver profile saved!', 'success');
   };
 
@@ -710,6 +808,99 @@ export default function DailyTripReportApp(){
       localStorage.setItem(LS_KEY, JSON.stringify(obj));
     }
   }, [carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines, notes]);
+
+  // Fetch plates dynamically for each trailer when it's added
+  useEffect(() => {
+    if (extraLines.length === 0) {
+      setDisplayedPlates({});
+      return;
+    }
+
+    const fetchPlates = async () => {
+      const newDisplayedPlates = {};
+      for (let i = 0; i < extraLines.length; i++) {
+        const line = extraLines[i];
+        if (line.trailer) {
+          try {
+            const plate = await getPlateForTrailer(line.trailer);
+            if (plate) {
+              newDisplayedPlates[i] = plate;
+            }
+          } catch (error) {
+            console.error(`Error fetching plate for trailer ${line.trailer}:`, error);
+          }
+        }
+      }
+      setDisplayedPlates(newDisplayedPlates);
+    };
+
+    fetchPlates();
+  }, [extraLines]);
+
+  // Google Sheets - Handle plate management (no caching, always fresh)
+  const addPlateForTrailer = async (index, trailerNo) => {
+    if (!plateInput.trim()) {
+      showNotification('❌ Please enter a plate number', 'error', 2000);
+      return;
+    }
+    
+    const plateValue = plateInput;
+    
+    // Update UI immediately for responsiveness
+    setDisplayedPlates(p => ({ ...p, [index]: plateValue }));
+    setPlateInput('');
+    setAddingPlateIndex(null);
+    showNotification(`✅ Plate ${plateValue} saved for trailer ${trailerNo}!`, 'success', 3000);
+    
+    // Save to Google Sheet immediately and wait for confirmation
+    try {
+      await saveTrailerToSheet(trailerNo, plateValue);
+      console.log('✅ Plate synced to Google Sheets');
+    } catch (error) {
+      console.error('Error syncing plate to Google Sheet:', error);
+      showNotification('⚠️ Failed to sync plate to Google Sheets', 'error', 3000);
+      // Revert UI on error
+      setDisplayedPlates(p => {
+        const updated = { ...p };
+        delete updated[index];
+        return updated;
+      });
+    }
+  };
+
+  const editPlateForTrailer = async (index, trailerNo, newPlate) => {
+    if (!newPlate.trim()) {
+      showNotification('❌ Please enter a plate number', 'error', 2000);
+      return;
+    }
+
+    const oldPlate = displayedPlates[index];
+    
+    // Update UI immediately for responsiveness
+    setDisplayedPlates(p => ({ ...p, [index]: newPlate }));
+    setPlateInput('');
+    setEditingPlateIndex(null);
+    showNotification(`✅ Plate updated to ${newPlate}!`, 'success', 3000);
+    
+    // Save to Google Sheet immediately and wait for confirmation
+    try {
+      await saveTrailerToSheet(trailerNo, newPlate);
+      console.log('✅ Plate synced to Google Sheets');
+    } catch (error) {
+      console.error('Error syncing plate to Google Sheet:', error);
+      showNotification('⚠️ Failed to sync plate to Google Sheets', 'error', 3000);
+      // Revert UI on error
+      if (oldPlate) {
+        setDisplayedPlates(p => ({ ...p, [index]: oldPlate }));
+      } else {
+        setDisplayedPlates(p => {
+          const updated = { ...p };
+          delete updated[index];
+          return updated;
+        });
+      }
+    }
+  };
 
   const addExtraLine = () => {
     setExtraLines(l => {
@@ -1230,6 +1421,10 @@ export default function DailyTripReportApp(){
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        setDisplayedPlates({}); // Clear all plate data after download
+        setPlateInput('');
+        setEditingPlateIndex(null);
+        setAddingPlateIndex(null);
         showNotification('📥 PDF downloaded successfully!', 'success');
         setTimeout(() => URL.revokeObjectURL(url), 60000);
       } catch (error) {
@@ -1264,14 +1459,17 @@ export default function DailyTripReportApp(){
       localStorage.removeItem(LS_KEY);
       setCarrier("TVM");
       setTerminal("Central Yard");
-      setTruck("9499");
+      // Keep current driver and truck (don't reset them)
       setDate(todayLocal());
-      setDriver("Rukan Gocer");
       setSig("");
       setPaperwork([]);
       setExtraLines([]);
       setRows([]);
       setNotes("");
+      setDisplayedPlates({}); // Clear all plate data
+      setPlateInput('');
+      setEditingPlateIndex(null);
+      setAddingPlateIndex(null);
       showNotification('♻️ Form reset successfully', 'info');
     }
   };
@@ -1288,6 +1486,111 @@ export default function DailyTripReportApp(){
           {toast.message}
         </div>
       )}
+      
+      {/* Welcome Modal - What's New */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 max-h-[90vh] overflow-y-auto">
+            
+            {/* Title */}
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">
+              What's New!
+            </h2>
+            <p className="text-center text-gray-500 text-sm mb-6">
+              Latest updates to improve your workflow
+            </p>
+            
+            {/* Divider */}
+            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-6"></div>
+            
+            {/* Feature List */}
+            <div className="space-y-4 mb-8">
+              {/* Feature 1 */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+                  ✓
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Aligned Form Layout</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Trailer No, Bill No, and Dispatch No are now perfectly aligned in the PDF layout for better organization.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Feature 2 */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+                  ✓
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Smart Plate Management</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Enter a trailer number and the plate automatically appears if it exists. Add and save new plates seamlessly.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Feature 3 */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+                  ✓
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Secure PIN Login</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    New 6-digit PIN code system with account lockout protection after 3 failed attempts.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Feature 4 */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+                  ✓
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Mobile Optimized</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Improved responsive design and performance optimizations for seamless mobile experience.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Feature 5 */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 flex items-start justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">
+                  ✓
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Flexible Weight Options</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    For Cosma loads, choose between weight options (12450 or 12997) for greater flexibility.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Divider */}
+            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-6"></div>
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setShowWelcomeModal(false)}
+              className="w-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 hover:from-purple-600 hover:via-indigo-600 hover:to-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-2xl"
+            >
+              Get Started
+            </button>
+            
+            {/* Footer */}
+            <p className="text-center text-gray-500 text-xs mt-4">
+              Have questions? <a href="mailto:rukanca@gmail.com" className="text-indigo-600 hover:text-indigo-700 font-medium">Contact support</a>
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Toast Notification */}
       
       {/* Driver Profile Selection Modal */}
       {showDriverSelect && (
@@ -1308,7 +1611,8 @@ export default function DailyTripReportApp(){
                 <select
                   value={selectedDriver}
                   onChange={(e) => setSelectedDriver(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={showPinInput}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Choose your name...</option>
                   {[...driverOptions].sort().map((name) => (
@@ -1321,7 +1625,8 @@ export default function DailyTripReportApp(){
                 <select
                   value={selectedTruck}
                   onChange={(e) => setSelectedTruck(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={showPinInput}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Choose your truck...</option>
                   {[...truckOptions].sort().map((truck) => (
@@ -1329,13 +1634,119 @@ export default function DailyTripReportApp(){
                   ))}
                 </select>
               </div>
+              
+              {/* PIN Input Field with On-Screen Numpad - Show only after Continue is clicked */}
+              {showPinInput && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Enter 6-Digit PIN</label>
+                  
+                  {/* PIN Display */}
+                  <div className="mb-4 p-4 bg-gray-50 border-2 border-gray-300 rounded-lg text-center">
+                    <div className="text-3xl font-bold tracking-widest text-gray-800 font-mono">
+                      {'●'.repeat(enteredPin.length)}{'○'.repeat(6 - enteredPin.length)}
+                    </div>
+                  </div>
+                  
+                  {/* Numpad */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => {
+                          if (enteredPin.length < 6) {
+                            setEnteredPin(enteredPin + num);
+                            setPinError('');
+                          }
+                        }}
+                        disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                        className="py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner"
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Bottom Row: 0, Backspace, Clear */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (enteredPin.length < 6) {
+                          setEnteredPin(enteredPin + '0');
+                          setPinError('');
+                        }
+                      }}
+                      disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                      className="py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner col-span-1"
+                    >
+                      0
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (enteredPin.length > 0) {
+                          setEnteredPin(enteredPin.slice(0, -1));
+                          setPinError('');
+                        }
+                      }}
+                      disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                      className="py-3 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner col-span-1"
+                      title="Backspace"
+                    >
+                      ⌫
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEnteredPin('');
+                        setPinError('');
+                      }}
+                      disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                      className="py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner col-span-1"
+                      title="Clear all"
+                    >
+                      C
+                    </button>
+                  </div>
+                  
+                  {/* Error Message */}
+                  {pinError && (
+                    <div className={`mt-3 text-sm font-medium p-2 rounded ${
+                      pinError.includes('🔒') ? 'bg-red-100 text-red-700' : 'bg-red-50 text-red-600'
+                    }`}>
+                      {pinError}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+            
             <button
               onClick={saveDriverProfile}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+              className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
+                accountLockedUntil !== null && Date.now() < accountLockedUntil
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
             >
-              Continue
+              {showPinInput ? 'Verify PIN' : 'Continue'}
             </button>
+            
+            {/* Back button - Show only when PIN input is displayed */}
+            {showPinInput && (
+              <button
+                onClick={() => {
+                  setShowPinInput(false);
+                  setEnteredPin('');
+                  setPinError('');
+                }}
+                className="w-full mt-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                Back
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1395,7 +1806,13 @@ export default function DailyTripReportApp(){
         <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Daily Fuel / Trip Report</h2>
           <button
-            onClick={() => setShowDriverSelect(true)}
+            onClick={() => {
+              setShowDriverSelect(true);
+              setShowPinInput(false);
+              setEnteredPin('');
+              setPinError('');
+              // Note: Keep failedAttempts and accountLockedUntil to maintain lockout across modal reopens
+            }}
             className="text-sm px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-2 transition-colors"
             title="Change driver profile"
           >
@@ -1469,10 +1886,10 @@ export default function DailyTripReportApp(){
           <div>
             <label className="mb-1 block text-sm">Driver Name</label>
             <input 
-              className="w-full rounded border border-gray-300 px-3 py-2 text-base" 
+              className="w-full rounded border border-gray-300 px-3 py-2 text-base bg-gray-50" 
               style={{ fontSize: '16px' }} 
               value={driver} 
-              onChange={e=>setDriver(e.target.value)}
+              readOnly
               list="driver-options"
               autoComplete="off"
             />
@@ -1531,11 +1948,111 @@ export default function DailyTripReportApp(){
                 </summary>
 
                 {/* Trip Detail fields */}
-                <div className="grid grid-cols-1 gap-2 border-t p-3 md:grid-cols-7 md:gap-2">
-                  <NumericInput value={r.trailer} onChange={v=>setExtraLine(i,{trailer:v})} placeholder="Trailer No"/>
-                  <input className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm" value={r.fromLoc} onChange={e=>setExtraLine(i,{fromLoc:e.target.value})} placeholder="From" list="location-options" autoComplete="off"/>
-                  <input className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm" value={r.toLoc} onChange={e=>setExtraLine(i,{toLoc:e.target.value})} placeholder="To" list="location-options" autoComplete="off"/>
-                  <NumericInput value={r.dispatch} onChange={v=>setExtraLine(i,{dispatch:v})} placeholder="Dispatch No"/>
+                <div className="grid grid-cols-1 gap-2 border-t p-3 md:grid-cols-7 md:gap-2" style={{maxWidth: '100%', boxSizing: 'border-box', display: 'grid'}}>
+                  {/* Trailer - includes plate field below on mobile */}
+                  <div className="flex flex-col gap-2">
+                    <NumericInput value={r.trailer} onChange={v=>setExtraLine(i,{trailer:v})} placeholder="Trailer No"/>
+                    {/* Plate field displayed on mobile only */}
+                    {r.trailer && (
+                      <div className="md:hidden text-xs" style={{maxWidth: '100%', boxSizing: 'border-box'}}>
+                        {displayedPlates[i] ? (
+                          editingPlateIndex === i ? (
+                            <div className="bg-blue-50 border border-blue-300 rounded p-1 space-y-0.5">
+                              <div className="flex gap-1">
+                                <input
+                                  type="text"
+                                  value={plateInput}
+                                  onChange={(e) => setPlateInput(e.target.value.toUpperCase())}
+                                  placeholder="Edit plate..."
+                                  className="flex-1 px-1 py-0.5 border border-blue-300 rounded text-xs min-w-0"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => editPlateForTrailer(i, r.trailer, plateInput)}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingPlateIndex(null);
+                                    setPlateInput('');
+                                  }}
+                                  className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-gray-600 bg-gray-50 px-1 py-0.5 rounded border border-gray-200 flex justify-between items-center group">
+                              <span className="truncate">📋 <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
+                              <button
+                                onClick={() => {
+                                  setEditingPlateIndex(i);
+                                  setPlateInput(displayedPlates[i]);
+                                }}
+                                className="text-gray-500 hover:text-blue-600 transition-opacity ml-1"
+                                title="Edit plate"
+                                type="button"
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                          )
+                        ) : (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded p-1 space-y-0.5">
+                            <div className="text-yellow-800">⚠️ No plate found</div>
+                            {addingPlateIndex === i ? (
+                              <div className="flex gap-1">
+                                <input
+                                  type="text"
+                                  value={plateInput}
+                                  onChange={(e) => setPlateInput(e.target.value.toUpperCase())}
+                                  placeholder="Enter plate..."
+                                  className="flex-1 px-1 py-0.5 border border-yellow-300 rounded text-xs min-w-0"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => addPlateForTrailer(i, r.trailer)}
+                                  className="px-1.5 py-0.5 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setAddingPlateIndex(null);
+                                    setPlateInput('');
+                                  }}
+                                  className="px-1.5 py-0.5 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setAddingPlateIndex(i);
+                                  setPlateInput('');
+                                }}
+                                className="text-yellow-700 font-semibold hover:text-yellow-900 cursor-pointer"
+                                type="button"
+                              >
+                                + Add plate?
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <NumericInput value={r.blno} onChange={v=>{
+                    setExtraLine(i,{blno:v});
+                    if (v && String(v).startsWith('1') && !r.weight) {
+                      setExtraLine(i,{weight:'20000'});
+                    }
+                  }} placeholder="Bill No" className="placeholder-gray-400"/>
+                  <NumericInput value={r.dispatch} onChange={v=>setExtraLine(i,{dispatch:v})} placeholder="Dispatch No" className="placeholder-gray-400"/>
                   <div className="flex gap-2 items-center">
                     <label className="inline-flex items-center gap-2 text-sm">
                       <input
@@ -1554,9 +2071,147 @@ export default function DailyTripReportApp(){
                       MT
                     </label>
                   </div>
-                  <NumericInput value={r.blno} onChange={v=>setExtraLine(i,{blno:v})} placeholder="Bill No" className="placeholder-gray-400"/>
-                  <NumericInput value={r.weight} onChange={v=>setExtraLine(i,{weight:v})} placeholder="Weight" className="placeholder-gray-400"/>
+                  <div className="flex flex-col gap-1">
+                    <NumericInput value={r.weight} onChange={v=>setExtraLine(i,{weight:v})} placeholder="Weight" className="placeholder-gray-400"/>
+                    {/* Weight buttons - mobile only (md:hidden) */}
+                    {String(r.blno).startsWith('8') && !r.weight && (
+                      <div className="md:hidden flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setExtraLine(i,{weight:'12450'})}
+                          className="flex-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-900 rounded font-medium transition-colors"
+                        >
+                          12450
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExtraLine(i,{weight:'12997'})}
+                          className="flex-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-900 rounded font-medium transition-colors"
+                        >
+                          12997
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <input className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm placeholder-gray-400" value={r.fromLoc} onChange={e=>setExtraLine(i,{fromLoc:e.target.value})} placeholder="From" list="location-options" autoComplete="off"/>
+                  <input className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm placeholder-gray-400" value={r.toLoc} onChange={e=>setExtraLine(i,{toLoc:e.target.value})} placeholder="To" list="location-options" autoComplete="off"/>
                 </div>
+
+                {/* Plate field - desktop only (shown below grid on md+, inside grid on mobile) */}
+                {r.trailer && (
+                  <div className="hidden md:block px-3 py-0 text-xs" style={{maxWidth: 'calc(100% / 7)', boxSizing: 'border-box'}}>
+                    {displayedPlates[i] ? (
+                      editingPlateIndex === i ? (
+                        <div className="bg-blue-50 border border-blue-300 rounded p-1 space-y-0.5">
+                          <div className="flex gap-1">
+                            <input
+                              type="text"
+                              value={plateInput}
+                              onChange={(e) => setPlateInput(e.target.value.toUpperCase())}
+                              placeholder="Edit plate..."
+                              className="flex-1 px-1 py-0.5 border border-blue-300 rounded text-xs min-w-0"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => editPlateForTrailer(i, r.trailer, plateInput)}
+                              className="px-2 py-1 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingPlateIndex(null);
+                                setPlateInput('');
+                              }}
+                              className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-gray-600 bg-gray-50 px-1 py-0.5 rounded border border-gray-200 flex justify-between items-center group">
+                          <span className="truncate">📋 <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
+                          <button
+                            onClick={() => {
+                              setEditingPlateIndex(i);
+                              setPlateInput(displayedPlates[i]);
+                            }}
+                            className="text-gray-500 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                            title="Edit plate"
+                            type="button"
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                      )
+                    ) : (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-1 space-y-0.5">
+                        <div className="text-yellow-800">⚠️ No plate found</div>
+                        {addingPlateIndex === i ? (
+                          <div className="flex gap-1">
+                            <input
+                              type="text"
+                              value={plateInput}
+                              onChange={(e) => setPlateInput(e.target.value.toUpperCase())}
+                              placeholder="Enter plate..."
+                              className="flex-1 px-1 py-0.5 border border-yellow-300 rounded text-xs min-w-0"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => addPlateForTrailer(i, r.trailer)}
+                              className="px-1.5 py-0.5 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => {
+                                setAddingPlateIndex(null);
+                                setPlateInput('');
+                              }}
+                              className="px-1.5 py-0.5 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setAddingPlateIndex(i);
+                              setPlateInput('');
+                            }}
+                            className="text-yellow-700 font-semibold hover:text-yellow-900 cursor-pointer"
+                            type="button"
+                          >
+                            + Add plate?
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Weight buttons - desktop only (shown below grid on md+, inside grid on mobile) */}
+                {String(r.blno).startsWith('8') && !r.weight && (
+                  <div className="hidden md:block px-3 py-0" style={{maxWidth: 'calc(100% / 7)', boxSizing: 'border-box', marginLeft: 'calc((100% / 7) * 4)'}}>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setExtraLine(i,{weight:'12450'})}
+                        className="w-full px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-900 rounded font-medium transition-colors"
+                      >
+                        12450
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExtraLine(i,{weight:'12997'})}
+                        className="w-full px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-900 rounded font-medium transition-colors"
+                      >
+                        12997
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Nested Trip Line for this detail */}
                 <div className="border-t p-3 mt-1 bg-gray-50/40">
@@ -1580,14 +2235,14 @@ export default function DailyTripReportApp(){
                         disabled={!tr.prov}
                       />
                     </div>
-                    <NumericInput value={tr.ob} onChange={v=>setRow(i,{ob:v})} placeholder="Odo Begin" className="px-2"/>
-                    <NumericInput value={tr.oe} onChange={v=>setRow(i,{oe:v})} placeholder="Odo End" className="px-2"/>
+                    <NumericInput value={tr.ob} onChange={v=>setRow(i,{ob:v})} placeholder="Odo Begin" className="px-2 placeholder-gray-400"/>
+                    <NumericInput value={tr.oe} onChange={v=>setRow(i,{oe:v})} placeholder="Odo End" className="px-2 placeholder-gray-400"/>
                     {tr.tollType === "non-toll" ? (
-                      <NumericInput value={tr.knt} onChange={v => setRow(i, { knt: v })} placeholder="Km Non-Toll" className="px-2" />
+                      <NumericInput value={tr.knt} onChange={v => setRow(i, { knt: v })} placeholder="Km Non-Toll" className="px-2 placeholder-gray-400" />
                     ) : (
-                      <NumericInput value={tr.kt} onChange={v => setRow(i, { kt: v })} placeholder="Km Toll" className="px-2" />
+                      <NumericInput value={tr.kt} onChange={v => setRow(i, { kt: v })} placeholder="Km Toll" className="px-2 placeholder-gray-400" />
                     )}
-                    <NumericInput value={tr.l} onChange={v=>setRow(i,{l:v})} placeholder="Liters" className="px-2"/>
+                    <NumericInput value={tr.l} onChange={v=>setRow(i,{l:v})} placeholder="Liters" className="px-2 placeholder-gray-400"/>
                     <div className="md:col-span-1">
                       <VendorAutocomplete value={tr.fv || ""} onChange={v => setRow(i, { fv: v })} disabled={false} />
                     </div>

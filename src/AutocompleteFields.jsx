@@ -33,7 +33,7 @@ export function ProvinceAutocomplete({ value, onChange, disabled }) {
   return (
     <div className="relative">
       <input
-        className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full"
+        className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full placeholder-gray-400"
         value={input}
         disabled={disabled}
         placeholder="Province/State"
@@ -106,7 +106,7 @@ export function HighwayAutocomplete({ province, value, onChange, disabled }) {
   return (
     <div className="relative">
       <input
-        className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full"
+        className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full placeholder-gray-400"
         value={input}
         disabled={disabled || !province}
         placeholder={placeholder}
@@ -210,8 +210,7 @@ export function HighwaysAutocompleteMulti({ province, values = [], onChange, dis
           ))}
           <input
             ref={inputRef}
-            className={`outline-none bg-transparent h-full min-w-[6rem] ${disabledAll ? 'pointer-events-none' : ''}`}
-            style={{ fontSize: '16px' }}
+            className={`outline-none bg-transparent h-full min-w-[6rem] placeholder-gray-400 text-base md:text-sm ${disabledAll ? 'pointer-events-none' : ''}`}
             value={input}
             disabled={disabledAll}
             placeholder={vals.length === 0 ? placeholder : ''}

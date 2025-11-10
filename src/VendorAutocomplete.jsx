@@ -13,7 +13,7 @@ export function VendorAutocomplete({ value, onChange, disabled }) {
   return (
     <div className="relative">
       <input
-        className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full"
+        className="rounded-md border border-gray-300 px-2 py-2 text-base md:text-sm w-full placeholder-gray-400"
         value={input}
         onChange={e => {
           setInput(e.target.value);
