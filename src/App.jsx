@@ -1456,7 +1456,9 @@ export default function DailyTripReportApp(){
   };
   const resetAll = () => {
     if (window.confirm('⚠️ Resetting the form will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
+      // Reset form data but KEEP driver profile in localStorage
       localStorage.removeItem(LS_KEY);
+      // DO NOT remove driverProfileKey - keep driver profile saved
       setCarrier("TVM");
       setTerminal("Central Yard");
       // Keep current driver and truck (don't reset them)
@@ -1470,7 +1472,12 @@ export default function DailyTripReportApp(){
       setPlateInput('');
       setEditingPlateIndex(null);
       setAddingPlateIndex(null);
-      showNotification('♻️ Form reset successfully', 'info');
+      // Reset PIN-related states
+      setEnteredPin('');
+      setPinError('');
+      setFailedAttempts(0);
+      setAccountLockedUntil(null);
+      showNotification('♻️ Form reset successfully. Driver profile saved.', 'info');
     }
   };
 
@@ -1597,43 +1604,51 @@ export default function DailyTripReportApp(){
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl">👤</span>
-              <h3 className="text-2xl font-bold text-gray-900">Select Your Profile</h3>
+              <span className="text-3xl">{showPinInput ? '�' : '�👤'}</span>
+              <h3 className="text-2xl font-bold text-gray-900">{showPinInput ? 'Verify PIN' : 'Select Your Profile'}</h3>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
               <p className="text-sm text-blue-900">
-                <strong>Note:</strong> Once you select a driver and truck, they will remain registered in this device until you change them again.
+                {showPinInput ? (
+                  <><strong>Driver:</strong> {driver} | <strong>Truck:</strong> {truck}</>
+                ) : (
+                  <><strong>Note:</strong> Once you select a driver and truck, they will remain registered in this device until you change them again.</>
+                )}
               </p>
             </div>
             <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Driver Name</label>
-                <select
-                  value={selectedDriver}
-                  onChange={(e) => setSelectedDriver(e.target.value)}
-                  disabled={showPinInput}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">Choose your name...</option>
-                  {[...driverOptions].sort().map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Truck Number</label>
-                <select
-                  value={selectedTruck}
-                  onChange={(e) => setSelectedTruck(e.target.value)}
-                  disabled={showPinInput}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">Choose your truck...</option>
-                  {[...truckOptions].sort().map((truck) => (
-                    <option key={truck} value={truck}>{truck}</option>
-                  ))}
-                </select>
-              </div>
+              {!showPinInput && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Driver Name</label>
+                    <select
+                      value={selectedDriver}
+                      onChange={(e) => setSelectedDriver(e.target.value)}
+                      disabled={showPinInput}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Choose your name...</option>
+                      {[...driverOptions].sort().map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Truck Number</label>
+                    <select
+                      value={selectedTruck}
+                      onChange={(e) => setSelectedTruck(e.target.value)}
+                      disabled={showPinInput}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Choose your truck...</option>
+                      {[...truckOptions].sort().map((truck) => (
+                        <option key={truck} value={truck}>{truck}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
               
               {/* PIN Input Field with On-Screen Numpad - Show only after Continue is clicked */}
               {showPinInput && (
