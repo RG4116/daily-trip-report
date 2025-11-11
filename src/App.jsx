@@ -1546,13 +1546,13 @@ export default function DailyTripReportApp(){
             </p>
             
             {/* Divider */}
-            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-4 sm:mb-6"></div>
+            <div className="h-1 bg-gradient-to-r from-gray-300 to-gray-400 rounded-full mb-4 sm:mb-6"></div>
             
             {/* Feature List */}
             <div className="space-y-2 sm:space-y-4 mb-6 sm:mb-8">
               {/* Feature 1 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
                 <div className="min-w-0">
@@ -1565,7 +1565,7 @@ export default function DailyTripReportApp(){
               
               {/* Feature 2 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
                 <div className="min-w-0">
@@ -1578,7 +1578,7 @@ export default function DailyTripReportApp(){
               
               {/* Feature 3 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
                 <div className="min-w-0">
@@ -1591,7 +1591,7 @@ export default function DailyTripReportApp(){
               
               {/* Feature 4 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
                 <div className="min-w-0">
@@ -1604,7 +1604,7 @@ export default function DailyTripReportApp(){
               
               {/* Feature 5 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-purple-100 text-purple-600 font-bold text-xs sm:text-sm mt-0.5">
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
                   ✓
                 </div>
                 <div className="min-w-0">
@@ -1617,12 +1617,12 @@ export default function DailyTripReportApp(){
             </div>
             
             {/* Divider */}
-            <div className="h-1 bg-gradient-to-r from-purple-400 to-indigo-600 rounded-full mb-4 sm:mb-6"></div>
+            <div className="h-1 bg-gradient-to-r from-gray-300 to-gray-400 rounded-full mb-4 sm:mb-6"></div>
             
             {/* Close Button */}
             <button
               onClick={() => setShowWelcomeModal(false)}
-              className="w-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 hover:from-purple-600 hover:via-indigo-600 hover:to-blue-600 text-white font-semibold py-2 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-2xl text-sm sm:text-base"
+              className="w-full bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 hover:from-gray-800 hover:via-gray-900 hover:to-black text-white font-semibold py-2 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-2xl text-sm sm:text-base"
             >
               Get Started
             </button>
@@ -1658,7 +1658,7 @@ export default function DailyTripReportApp(){
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl">{showPinInput ? '�' : '�👤'}</span>
+              <span className="text-3xl">{showPinInput ? '🔒' : '👤'}</span>
               <h3 className="text-2xl font-bold text-gray-900">{showPinInput ? 'Verify PIN' : 'Select Your Profile'}</h3>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
@@ -1707,17 +1707,17 @@ export default function DailyTripReportApp(){
               {/* PIN Input Field with On-Screen Numpad - Show only after Continue is clicked */}
               {showPinInput && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Enter 4-Digit PIN</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-4">Enter 4-Digit PIN</label>
                   
                   {/* PIN Display */}
-                  <div className="mb-4 p-4 bg-gray-50 border-2 border-gray-300 rounded-lg text-center">
-                    <div className="text-3xl font-bold tracking-widest text-gray-800 font-mono">
+                  <div className="mb-6 p-5 bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-300 rounded-2xl text-center shadow-sm">
+                    <div className="text-4xl font-bold tracking-widest text-gray-900 font-mono">
                       {'●'.repeat(enteredPin.length)}{'○'.repeat(4 - enteredPin.length)}
                     </div>
                   </div>
                   
                   {/* Numpad */}
-                  <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="grid grid-cols-3 gap-3 mb-4">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                       <button
                         key={num}
@@ -1729,7 +1729,7 @@ export default function DailyTripReportApp(){
                           }
                         }}
                         disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                        className="py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner"
+                        className="py-4 px-4 bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-100 hover:to-gray-200 active:shadow-lg active:scale-95 border border-gray-200 hover:border-gray-400"
                       >
                         {num}
                       </button>
@@ -1737,7 +1737,7 @@ export default function DailyTripReportApp(){
                   </div>
                   
                   {/* Bottom Row: 0, Backspace, Clear */}
-                  <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="grid grid-cols-3 gap-3 mb-4">
                     <button
                       type="button"
                       onClick={() => {
@@ -1747,7 +1747,7 @@ export default function DailyTripReportApp(){
                         }
                       }}
                       disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                      className="py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner col-span-1"
+                      className="py-4 px-4 bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-100 hover:to-gray-200 active:shadow-lg active:scale-95 border border-gray-200 hover:border-gray-400"
                     >
                       0
                     </button>
@@ -1760,7 +1760,7 @@ export default function DailyTripReportApp(){
                         }
                       }}
                       disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                      className="py-3 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner col-span-1"
+                      className="py-4 px-4 bg-gradient-to-br from-gray-200 to-gray-300 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-300 hover:to-gray-400 active:shadow-lg active:scale-95 border border-gray-400 hover:border-gray-500"
                       title="Backspace"
                     >
                       ⌫
@@ -1772,7 +1772,7 @@ export default function DailyTripReportApp(){
                         setPinError('');
                       }}
                       disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                      className="py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-bold text-lg rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md active:shadow-inner col-span-1"
+                      className="py-4 px-4 bg-gradient-to-br from-gray-200 to-gray-300 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-300 hover:to-gray-400 active:shadow-lg active:scale-95 border border-gray-400 hover:border-gray-500"
                       title="Clear all"
                     >
                       C
@@ -1781,8 +1781,8 @@ export default function DailyTripReportApp(){
                   
                   {/* Error Message */}
                   {pinError && (
-                    <div className={`mt-3 text-sm font-medium p-2 rounded ${
-                      pinError.includes('🔒') ? 'bg-red-100 text-red-700' : 'bg-red-50 text-red-600'
+                    <div className={`mt-4 text-sm font-medium p-3 rounded-lg ${
+                      pinError.includes('🔒') ? 'bg-red-100 border border-red-300 text-red-700' : 'bg-red-50 border border-red-200 text-red-600'
                     }`}>
                       {pinError}
                     </div>
