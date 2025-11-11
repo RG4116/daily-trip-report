@@ -1656,13 +1656,13 @@ export default function DailyTripReportApp(){
       {/* Driver Profile Selection Modal */}
       {showDriverSelect && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+          <div className="bg-gradient-to-br from-slate-900 to-black rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-6">
               <span className="text-3xl">{showPinInput ? '🔒' : '👤'}</span>
-              <h3 className="text-2xl font-bold text-gray-900">{showPinInput ? 'Verify PIN' : 'Select Your Profile'}</h3>
+              <h3 className="text-2xl font-bold text-white">{showPinInput ? 'Verify PIN' : 'Select Your Profile'}</h3>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-              <p className="text-sm text-blue-900">
+            <div className="bg-blue-950 border border-blue-800 rounded-lg p-3 mb-6">
+              <p className="text-sm text-blue-200">
                 {showPinInput ? (
                   <><strong>Driver:</strong> {driver} | <strong>Truck:</strong> {truck}</>
                 ) : (
@@ -1674,12 +1674,12 @@ export default function DailyTripReportApp(){
               {!showPinInput && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Driver Name</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Driver Name</label>
                     <select
                       value={selectedDriver}
                       onChange={(e) => setSelectedDriver(e.target.value)}
                       disabled={showPinInput}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed"
                     >
                       <option value="">Choose your name...</option>
                       {[...driverOptions].sort().map((name) => (
@@ -1688,12 +1688,12 @@ export default function DailyTripReportApp(){
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Truck Number</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Truck Number</label>
                     <select
                       value={selectedTruck}
                       onChange={(e) => setSelectedTruck(e.target.value)}
                       disabled={showPinInput}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed"
                     >
                       <option value="">Choose your truck...</option>
                       {[...truckOptions].sort().map((truck) => (
@@ -1706,83 +1706,101 @@ export default function DailyTripReportApp(){
               
               {/* PIN Input Field with On-Screen Numpad - Show only after Continue is clicked */}
               {showPinInput && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-4">Enter 4-Digit PIN</label>
+                <div className="w-full flex flex-col items-center gap-6 py-6">
+                  <label className="text-xs text-gray-500 font-medium tracking-wide uppercase">Enter 4-Digit PIN</label>
                   
-                  {/* PIN Display */}
-                  <div className="mb-6 p-5 bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-300 rounded-2xl text-center shadow-sm">
-                    <div className="text-4xl font-bold tracking-widest text-gray-900 font-mono">
-                      {'●'.repeat(enteredPin.length)}{'○'.repeat(4 - enteredPin.length)}
-                    </div>
+                  {/* PIN Display - Animated Dots */}
+                  <div className="flex justify-center gap-3.5 min-h-7">
+                    {[...Array(4)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${
+                          i < enteredPin.length
+                            ? 'bg-white shadow-lg scale-125'
+                            : 'border-1.5 border-white/35'
+                        }`}
+                      />
+                    ))}
                   </div>
                   
-                  {/* Numpad */}
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  {/* Numpad - Apple Style */}
+                  <div className="w-full flex justify-center">
+                    <div className="grid grid-cols-3 gap-6 w-fit">
+                      {/* Rows 1-3: Numbers 1-9 */}
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => {
+                            if (enteredPin.length < 4) {
+                              setEnteredPin(enteredPin + num);
+                              setPinError('');
+                            }
+                          }}
+                          disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                          className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl flex items-center justify-center active:scale-94"
+                          style={{
+                            background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
+                            backdropFilter: 'blur(16px)',
+                            WebkitBackdropFilter: 'blur(16px)',
+                            boxShadow: '0 10px 26px rgba(0,0,0,0.35)',
+                            transform: 'translateZ(0)',
+                          }}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                      
+                      {/* Row 4: Empty, 0, Backspace */}
+                      <div></div>
                       <button
-                        key={num}
                         type="button"
                         onClick={() => {
                           if (enteredPin.length < 4) {
-                            setEnteredPin(enteredPin + num);
+                            setEnteredPin(enteredPin + '0');
                             setPinError('');
                           }
                         }}
                         disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                        className="py-4 px-4 bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-100 hover:to-gray-200 active:shadow-lg active:scale-95 border border-gray-200 hover:border-gray-400"
+                        className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl flex items-center justify-center active:scale-94"
+                        style={{
+                          background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
+                          backdropFilter: 'blur(16px)',
+                          WebkitBackdropFilter: 'blur(16px)',
+                          boxShadow: '0 10px 26px rgba(0,0,0,0.35)',
+                          transform: 'translateZ(0)',
+                        }}
                       >
-                        {num}
+                        0
                       </button>
-                    ))}
-                  </div>
-                  
-                  {/* Bottom Row: 0, Backspace, Clear */}
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (enteredPin.length < 4) {
-                          setEnteredPin(enteredPin + '0');
-                          setPinError('');
-                        }
-                      }}
-                      disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                      className="py-4 px-4 bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-100 hover:to-gray-200 active:shadow-lg active:scale-95 border border-gray-200 hover:border-gray-400"
-                    >
-                      0
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (enteredPin.length > 0) {
-                          setEnteredPin(enteredPin.slice(0, -1));
-                          setPinError('');
-                        }
-                      }}
-                      disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                      className="py-4 px-4 bg-gradient-to-br from-gray-200 to-gray-300 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-300 hover:to-gray-400 active:shadow-lg active:scale-95 border border-gray-400 hover:border-gray-500"
-                      title="Backspace"
-                    >
-                      ⌫
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEnteredPin('');
-                        setPinError('');
-                      }}
-                      disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                      className="py-4 px-4 bg-gradient-to-br from-gray-200 to-gray-300 text-gray-900 font-bold text-xl rounded-xl transition-all duration-150 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:from-gray-300 hover:to-gray-400 active:shadow-lg active:scale-95 border border-gray-400 hover:border-gray-500"
-                      title="Clear all"
-                    >
-                      C
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (enteredPin.length > 0) {
+                            setEnteredPin(enteredPin.slice(0, -1));
+                            setPinError('');
+                          }
+                        }}
+                        disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                        className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl flex items-center justify-center active:scale-94"
+                        style={{
+                          background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
+                          backdropFilter: 'blur(16px)',
+                          WebkitBackdropFilter: 'blur(16px)',
+                          boxShadow: '0 10px 26px rgba(0,0,0,0.35)',
+                          transform: 'translateZ(0)',
+                        }}
+                        title="Backspace"
+                      >
+                        ⌫
+                      </button>
+                    </div>
                   </div>
                   
                   {/* Error Message */}
                   {pinError && (
-                    <div className={`mt-4 text-sm font-medium p-3 rounded-lg ${
-                      pinError.includes('🔒') ? 'bg-red-100 border border-red-300 text-red-700' : 'bg-red-50 border border-red-200 text-red-600'
+                    <div className={`mt-2 text-sm font-medium p-3 rounded-lg w-full ${
+                      pinError.includes('🔒') ? 'bg-red-900 border border-red-700 text-red-100' : 'bg-red-800 border border-red-700 text-red-100'
                     }`}>
                       {pinError}
                     </div>
@@ -1796,8 +1814,8 @@ export default function DailyTripReportApp(){
               disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
               className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
                 accountLockedUntil !== null && Date.now() < accountLockedUntil || showPinInput
-                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
               style={{ display: showPinInput ? 'none' : 'block' }}
             >
@@ -1812,7 +1830,7 @@ export default function DailyTripReportApp(){
                   setEnteredPin('');
                   setPinError('');
                 }}
-                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
               >
                 Back
               </button>
@@ -2430,14 +2448,15 @@ export default function DailyTripReportApp(){
           {/* Signature certification checkbox removed as requested */}
         </div>
 
-        <div className="flex flex-wrap gap-2 justify-start">
-          <button type="button" onClick={downloadPdf} disabled={!isFormValidForExport} className={`rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 border border-gray-300 flex items-center gap-1 sm:gap-2 ${isFormValidForExport? 'text-gray-800 hover:bg-gray-100':'text-gray-400 cursor-not-allowed bg-gray-100'}`}>
+        <div className="flex flex-wrap gap-3 justify-start">
+          <button type="button" onClick={downloadPdf} disabled={!isFormValidForExport} className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] ${isFormValidForExport? 'bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95':'text-gray-500 cursor-not-allowed bg-gray-300 border border-gray-400'}`} style={{boxShadow: isFormValidForExport ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'}}>
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Download PDF">📥</span>
             <span>Download</span>
           </button>
           <button
             onClick={handleExport}
-            className={`rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 border flex items-center gap-1 sm:gap-2 ${isFormValidForExport? 'bg-blue-500 text-white hover:bg-blue-600 border-blue-600':'text-gray-400 cursor-not-allowed bg-gray-100 border-gray-300'}`}
+            className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] ${isFormValidForExport? 'bg-blue-600 border border-blue-700 text-white hover:bg-blue-700 active:scale-95':'text-gray-500 cursor-not-allowed bg-gray-300 border border-gray-400'}`}
+            style={{boxShadow: isFormValidForExport ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'}}
             title="Export current form data to JSON file"
             disabled={!isFormValidForExport}
           >
@@ -2446,7 +2465,8 @@ export default function DailyTripReportApp(){
           </button>
           <button
             onClick={triggerFileInput}
-            className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 bg-green-500 text-white hover:bg-green-600 border border-green-600 flex items-center gap-1 sm:gap-2"
+            className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-green-600 border border-green-700 text-white hover:bg-green-700 active:scale-95"
+            style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}
             title="Import form data from JSON file"
           >
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Import">📂</span>
@@ -2459,16 +2479,16 @@ export default function DailyTripReportApp(){
             onChange={handleImport}
             className="hidden"
           />
-          <button type="button" onClick={openPdf} className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-1 sm:gap-2">
+          <button type="button" onClick={openPdf} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Open PDF in New Tab">📖</span>
             <span>Open PDF</span>
           </button>
-          <button type="button" onClick={sendByEmail} className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-1 sm:gap-2">
+          <button type="button" onClick={sendByEmail} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
             <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Send by Email">✉️</span>
             <span>Email</span>
           </button>
-          <button type="button" onClick={resetAll} className="rounded-md px-2 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 text-gray-800 hover:bg-gray-100 border border-gray-300 flex items-center gap-1 sm:gap-2">
-            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Reset">♻️</span>
+          <button type="button" onClick={resetAll} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-red-600 border border-red-700 text-white hover:bg-red-700 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
+            <span style={{fontSize: '1.3em', display: 'inline-block', color: '#ffffff'}} aria-label="Reset">↻</span>
             <span>Reset</span>
           </button>
         </div>
