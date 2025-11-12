@@ -755,6 +755,15 @@ export default function DailyTripReportApp(){
     }
   }, [enteredPin, showPinInput, selectedDriver]);
 
+  // Lock screen to portrait orientation when PIN pad is shown
+  useEffect(() => {
+    if (showPinInput && window.lockToPortrait) {
+      window.lockToPortrait();
+    } else if (!showPinInput && window.unlockOrientation) {
+      window.unlockOrientation();
+    }
+  }, [showPinInput]);
+
   // PIN verification logic (extracted for reuse)
   const verifyPin = (pin, driver) => {
     // Check if account is locked
@@ -1655,187 +1664,293 @@ export default function DailyTripReportApp(){
       {/* Toast Notification */}
       
       {/* Driver Profile Selection Modal */}
-      {showDriverSelect && (
+      {showDriverSelect && !showPinInput && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-blue-900 to-slate-900 rounded-lg shadow-2xl max-w-md w-full p-6">
+          <div className="bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl">{showPinInput ? '🔒' : '👤'}</span>
-              <h3 className="text-2xl font-bold text-white">{showPinInput ? 'Verify PIN' : 'Select Your Profile'}</h3>
+              <span className="text-3xl">👤</span>
+              <h3 className="text-2xl font-bold text-gray-900">Select Your Profile</h3>
             </div>
-            <div className="bg-blue-950 border border-blue-800 rounded-lg p-3 mb-6">
-              <p className="text-sm text-blue-200">
-                {showPinInput ? (
-                  <><strong>Driver:</strong> {driver} | <strong>Truck:</strong> {truck}</>
-                ) : (
-                  <><strong>Note:</strong> Once you select a driver and truck, they will remain registered in this device until you change them again.</>
-                )}
+            <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 mb-6">
+              <p className="text-sm text-gray-700">
+                <strong>Note:</strong> Once you select a driver and truck, they will remain registered in this device until you change them again.
               </p>
             </div>
             <div className="space-y-4 mb-6">
-              {!showPinInput && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-blue-200 mb-2">Driver Name</label>
-                    <select
-                      value={selectedDriver}
-                      onChange={(e) => setSelectedDriver(e.target.value)}
-                      disabled={showPinInput}
-                      className="w-full px-4 py-2 border border-blue-700 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-700 disabled:cursor-not-allowed hover:border-blue-600 transition-colors"
-                    >
-                      <option value="">Choose your name...</option>
-                      {[...driverOptions].sort().map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-blue-200 mb-2">Truck Number</label>
-                    <select
-                      value={selectedTruck}
-                      onChange={(e) => setSelectedTruck(e.target.value)}
-                      disabled={showPinInput}
-                      className="w-full px-4 py-2 border border-blue-700 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-700 disabled:cursor-not-allowed hover:border-blue-600 transition-colors"
-                    >
-                      <option value="">Choose your truck...</option>
-                      {[...truckOptions].sort().map((truck) => (
-                        <option key={truck} value={truck}>{truck}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-              
-              {/* PIN Input Field with On-Screen Numpad - Show only after Continue is clicked */}
-              {showPinInput && (
-                <div className="w-full flex flex-col items-center gap-4 md:gap-6 py-4 md:py-6">
-                  <label className="text-xs text-gray-500 font-medium tracking-wide uppercase">Enter 4-Digit PIN</label>
-                  
-                  {/* PIN Display - Animated Dots */}
-                  <div className="flex justify-center gap-2 md:gap-3.5 min-h-7">
-                    {[...Array(4)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-3 md:w-3.5 h-3 md:h-3.5 rounded-full transition-all duration-150 ${
-                          i < enteredPin.length
-                            ? 'bg-white shadow-lg scale-125'
-                            : 'border-1.5 border-white/35'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Numpad - Apple Style */}
-                  <div className="w-full flex justify-center px-2 md:px-0">
-                    <div className="grid grid-cols-3 gap-4 md:gap-6 w-fit">
-                      {/* Rows 1-3: Numbers 1-9 */}
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                        <button
-                          key={num}
-                          type="button"
-                          onClick={() => {
-                            if (enteredPin.length < 4) {
-                              setEnteredPin(enteredPin + num);
-                              setPinError('');
-                            }
-                          }}
-                          disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                          className="w-20 h-20 md:w-24 md:h-24 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl md:text-3xl flex items-center justify-center active:scale-94"
-                          style={{
-                            background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
-                            backdropFilter: 'blur(16px)',
-                            WebkitBackdropFilter: 'blur(16px)',
-                            boxShadow: '0 10px 26px rgba(0,0,0,0.35)',
-                            transform: 'translateZ(0)',
-                          }}
-                        >
-                          {num}
-                        </button>
-                      ))}
-                      
-                      {/* Row 4: Empty, 0, Backspace */}
-                      <div></div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (enteredPin.length < 4) {
-                            setEnteredPin(enteredPin + '0');
-                            setPinError('');
-                          }
-                        }}
-                        disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                        className="w-20 h-20 md:w-24 md:h-24 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl md:text-3xl flex items-center justify-center active:scale-94"
-                        style={{
-                          background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
-                          backdropFilter: 'blur(16px)',
-                          WebkitBackdropFilter: 'blur(16px)',
-                          boxShadow: '0 10px 26px rgba(0,0,0,0.35)',
-                          transform: 'translateZ(0)',
-                        }}
-                      >
-                        0
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (enteredPin.length > 0) {
-                            setEnteredPin(enteredPin.slice(0, -1));
-                            setPinError('');
-                          }
-                        }}
-                        disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                        className="w-20 h-20 md:w-24 md:h-24 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl md:text-3xl flex items-center justify-center active:scale-94"
-                        style={{
-                          background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
-                          backdropFilter: 'blur(16px)',
-                          WebkitBackdropFilter: 'blur(16px)',
-                          boxShadow: '0 10px 26px rgba(0,0,0,0.35)',
-                          transform: 'translateZ(0)',
-                        }}
-                        title="Backspace"
-                      >
-                        ⌫
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Error Message */}
-                  {pinError && (
-                    <div className={`mt-2 text-sm font-medium p-3 rounded-lg w-full ${
-                      pinError.includes('🔒') ? 'bg-red-900 border border-red-700 text-red-100' : 'bg-red-800 border border-red-700 text-red-100'
-                    }`}>
-                      {pinError}
-                    </div>
-                  )}
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-2">Driver Name</label>
+                <select
+                  value={selectedDriver}
+                  onChange={(e) => setSelectedDriver(e.target.value)}
+                  disabled={showPinInput}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-300 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
+                >
+                  <option value="">Choose your name...</option>
+                  {[...driverOptions].sort().map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-2">Truck Number</label>
+                <select
+                  value={selectedTruck}
+                  onChange={(e) => setSelectedTruck(e.target.value)}
+                  disabled={showPinInput}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-300 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
+                >
+                  <option value="">Choose your truck...</option>
+                  {[...truckOptions].sort().map((truck) => (
+                    <option key={truck} value={truck}>{truck}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             
             <button
               onClick={saveDriverProfile}
               disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
               className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
-                accountLockedUntil !== null && Date.now() < accountLockedUntil || showPinInput
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                accountLockedUntil !== null && Date.now() < accountLockedUntil
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-gray-800 hover:bg-gray-900 text-white'
               }`}
-              style={{ display: showPinInput ? 'none' : 'block' }}
             >
               Continue
             </button>
-            
-            {/* Back button - Show only when PIN input is displayed */}
-            {showPinInput && (
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen PIN Pad */}
+      {showPinInput && (
+        <div className="fixed inset-0 bg-gradient-to-br from-white via-gray-50 to-gray-200 z-50 flex flex-col items-center justify-center p-4">
+          {/* Portrait Layout (visible on mobile) */}
+          <div className="flex flex-col items-center justify-center w-full md:hidden">
+            {/* Header - Subtitle Only */}
+            <div className="mb-12 text-center">
+              <p className="text-gray-600 font-medium">Enter PIN</p>
+            </div>
+
+            {/* PIN Display - Animated Dots */}
+            <div className="flex justify-center gap-4 mb-16">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-150 ${
+                    i < enteredPin.length
+                      ? 'bg-gray-800 shadow-lg scale-125 w-5 h-5'
+                      : 'border-2 border-gray-400 w-5 h-5'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Numpad */}
+            <div className="flex justify-center mb-10">
+              <div className="grid grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      if (enteredPin.length < 4) {
+                        setEnteredPin(enteredPin + num);
+                        setPinError('');
+                      }
+                    }}
+                    disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                    className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold text-2xl flex items-center justify-center active:scale-94 shadow-md hover:shadow-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(229,229,229,0.6))',
+                      backdropFilter: 'blur(10px)',
+                      WebkitBackdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                    }}
+                  >
+                    {num}
+                  </button>
+                ))}
+                
+                {/* Row 4: Empty, 0, Backspace */}
+                <div></div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (enteredPin.length < 4) {
+                      setEnteredPin(enteredPin + '0');
+                      setPinError('');
+                    }
+                  }}
+                  disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                  className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold text-2xl flex items-center justify-center active:scale-94 shadow-md hover:shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(229,229,229,0.6))',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.5)',
+                  }}
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (enteredPin.length > 0) {
+                      setEnteredPin(enteredPin.slice(0, -1));
+                      setPinError('');
+                    }
+                  }}
+                  disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                  className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold text-2xl flex items-center justify-center active:scale-94 shadow-md hover:shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(229,229,229,0.6))',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.5)',
+                  }}
+                  title="Backspace"
+                >
+                  ⌫
+                </button>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {pinError && (
+              <div className={`text-center font-medium mb-6 px-6 py-3 rounded-lg ${
+                pinError.includes('🔒') ? 'bg-red-900 text-red-100' : 'bg-red-800 text-red-100'
+              }`}>
+                {pinError}
+              </div>
+            )}
+
+            {/* Back Button */}
+            <button
+              onClick={() => {
+                setShowPinInput(false);
+                setEnteredPin('');
+                setPinError('');
+              }}
+              className="bg-gray-400 hover:bg-gray-500 text-white font-semibold px-8 py-2 rounded-lg transition-colors"
+            >
+              Back
+            </button>
+          </div>
+
+          {/* Landscape Layout (visible on tablet/desktop and when device is in landscape) */}
+          <div className="hidden md:flex flex-col items-center justify-center w-full h-full px-2">
+            <div className="flex flex-col items-center gap-1.5">
+              {/* Header - Subtitle Only */}
+              <div className="text-center">
+                <p className="text-gray-600 font-medium text-sm">Enter PIN</p>
+              </div>
+
+              {/* PIN Display - Animated Dots */}
+              <div className="flex justify-center gap-1.5">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-full transition-all duration-150 ${
+                      i < enteredPin.length
+                        ? 'bg-gray-800 shadow-lg scale-125 w-2.5 h-2.5'
+                        : 'border-2 border-gray-400 w-2.5 h-2.5'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Numpad - Ultra compact for landscape */}
+              <div className="flex justify-center my-1">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => {
+                        if (enteredPin.length < 4) {
+                          setEnteredPin(enteredPin + num);
+                          setPinError('');
+                        }
+                      }}
+                      disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                      className="w-12 h-12 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold text-base flex items-center justify-center active:scale-94 shadow-md hover:shadow-lg"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(229,229,229,0.6))',
+                        backdropFilter: 'blur(10px)',
+                        WebkitBackdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255,255,255,0.5)',
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  
+                  {/* Row 4: Empty, 0, Backspace */}
+                  <div></div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (enteredPin.length < 4) {
+                        setEnteredPin(enteredPin + '0');
+                        setPinError('');
+                      }
+                    }}
+                    disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                    className="w-12 h-12 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold text-base flex items-center justify-center active:scale-94 shadow-md hover:shadow-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(229,229,229,0.6))',
+                      backdropFilter: 'blur(10px)',
+                      WebkitBackdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                    }}
+                  >
+                    0
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (enteredPin.length > 0) {
+                        setEnteredPin(enteredPin.slice(0, -1));
+                        setPinError('');
+                      }
+                    }}
+                    disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
+                    className="w-12 h-12 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold text-base flex items-center justify-center active:scale-94 shadow-md hover:shadow-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(229,229,229,0.6))',
+                      backdropFilter: 'blur(10px)',
+                      WebkitBackdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                    }}
+                    title="Backspace"
+                  >
+                    ⌫
+                  </button>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {pinError && (
+                <div className={`text-center font-medium px-3 py-0.5 rounded-lg text-xs ${
+                  pinError.includes('🔒') ? 'bg-red-900 text-red-100' : 'bg-red-800 text-red-100'
+                }`}>
+                  {pinError}
+                </div>
+              )}
+
+              {/* Back Button */}
               <button
                 onClick={() => {
                   setShowPinInput(false);
                   setEnteredPin('');
                   setPinError('');
                 }}
-                className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="bg-gray-400 hover:bg-gray-500 text-white font-semibold px-5 py-1.5 rounded-lg transition-colors text-xs mt-1"
               >
                 Back
               </button>
-            )}
+            </div>
           </div>
         </div>
       )}

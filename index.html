@@ -4,6 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Daily Trip Report</title>
+    <script>
+      // Lock screen to portrait orientation when PIN pad is shown
+      window.lockToPortrait = function() {
+        if (screen.orientation && screen.orientation.lock) {
+          try {
+            screen.orientation.lock('portrait-primary').catch(err => {
+              console.log('Cannot lock orientation (may not be supported):', err);
+            });
+          } catch (e) {
+            console.log('Orientation lock not available');
+          }
+        }
+      };
+      
+      window.unlockOrientation = function() {
+        if (screen.orientation && screen.orientation.unlock) {
+          try {
+            screen.orientation.unlock();
+          } catch (e) {
+            console.log('Cannot unlock orientation');
+          }
+        }
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>
