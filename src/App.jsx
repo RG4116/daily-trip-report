@@ -2070,7 +2070,7 @@ export default function DailyTripReportApp(){
                             </div>
                           ) : (
                             <div className="text-gray-600 bg-gray-50 px-1 py-0.5 rounded border border-gray-200 flex justify-between items-center group">
-                              <span className="truncate">📋 <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
+                              <span className="truncate"><span className="text-gray-500 text-xs">Plate:</span> <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
                               <button
                                 onClick={() => {
                                   setEditingPlateIndex(i);
@@ -2215,7 +2215,7 @@ export default function DailyTripReportApp(){
                         </div>
                       ) : (
                         <div className="text-gray-600 bg-gray-50 px-1 py-0.5 rounded border border-gray-200 flex justify-between items-center group">
-                          <span className="truncate">📋 <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
+                          <span className="truncate"><span className="text-gray-500 text-xs">Plate:</span> <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
                           <button
                             onClick={() => {
                               setEditingPlateIndex(i);
