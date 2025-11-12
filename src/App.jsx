@@ -1543,7 +1543,7 @@ export default function DailyTripReportApp(){
       )}
       
       {/* Welcome Modal - What's New */}
-      {showWelcomeModal && (
+      {false && showWelcomeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md p-6 sm:p-8 max-h-[95vh] overflow-y-auto">
             
