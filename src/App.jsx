@@ -792,6 +792,7 @@ export default function DailyTripReportApp(){
     const profile = { driver: driver, truck: selectedTruck };
     localStorage.setItem(driverProfileKey, JSON.stringify(profile));
     setDriver(driver);
+    setTruck(selectedTruck);
     setShowDriverSelect(false);
     
     // Set PIN verified flag in sessionStorage
