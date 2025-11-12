@@ -1657,7 +1657,7 @@ export default function DailyTripReportApp(){
       {/* Driver Profile Selection Modal */}
       {showDriverSelect && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-900 to-black rounded-lg shadow-2xl max-w-md w-full p-6">
+          <div className="bg-gradient-to-br from-blue-900 to-slate-900 rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-6">
               <span className="text-3xl">{showPinInput ? '🔒' : '👤'}</span>
               <h3 className="text-2xl font-bold text-white">{showPinInput ? 'Verify PIN' : 'Select Your Profile'}</h3>
@@ -1675,12 +1675,12 @@ export default function DailyTripReportApp(){
               {!showPinInput && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Driver Name</label>
+                    <label className="block text-sm font-medium text-blue-200 mb-2">Driver Name</label>
                     <select
                       value={selectedDriver}
                       onChange={(e) => setSelectedDriver(e.target.value)}
                       disabled={showPinInput}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-blue-700 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-700 disabled:cursor-not-allowed hover:border-blue-600 transition-colors"
                     >
                       <option value="">Choose your name...</option>
                       {[...driverOptions].sort().map((name) => (
@@ -1689,12 +1689,12 @@ export default function DailyTripReportApp(){
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Truck Number</label>
+                    <label className="block text-sm font-medium text-blue-200 mb-2">Truck Number</label>
                     <select
                       value={selectedTruck}
                       onChange={(e) => setSelectedTruck(e.target.value)}
                       disabled={showPinInput}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-blue-700 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-700 disabled:cursor-not-allowed hover:border-blue-600 transition-colors"
                     >
                       <option value="">Choose your truck...</option>
                       {[...truckOptions].sort().map((truck) => (
@@ -1707,15 +1707,15 @@ export default function DailyTripReportApp(){
               
               {/* PIN Input Field with On-Screen Numpad - Show only after Continue is clicked */}
               {showPinInput && (
-                <div className="w-full flex flex-col items-center gap-6 py-6">
+                <div className="w-full flex flex-col items-center gap-4 md:gap-6 py-4 md:py-6">
                   <label className="text-xs text-gray-500 font-medium tracking-wide uppercase">Enter 4-Digit PIN</label>
                   
                   {/* PIN Display - Animated Dots */}
-                  <div className="flex justify-center gap-3.5 min-h-7">
+                  <div className="flex justify-center gap-2 md:gap-3.5 min-h-7">
                     {[...Array(4)].map((_, i) => (
                       <div
                         key={i}
-                        className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${
+                        className={`w-3 md:w-3.5 h-3 md:h-3.5 rounded-full transition-all duration-150 ${
                           i < enteredPin.length
                             ? 'bg-white shadow-lg scale-125'
                             : 'border-1.5 border-white/35'
@@ -1725,8 +1725,8 @@ export default function DailyTripReportApp(){
                   </div>
                   
                   {/* Numpad - Apple Style */}
-                  <div className="w-full flex justify-center">
-                    <div className="grid grid-cols-3 gap-6 w-fit">
+                  <div className="w-full flex justify-center px-2 md:px-0">
+                    <div className="grid grid-cols-3 gap-4 md:gap-6 w-fit">
                       {/* Rows 1-3: Numbers 1-9 */}
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                         <button
@@ -1739,7 +1739,7 @@ export default function DailyTripReportApp(){
                             }
                           }}
                           disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                          className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl flex items-center justify-center active:scale-94"
+                          className="w-20 h-20 md:w-24 md:h-24 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl md:text-3xl flex items-center justify-center active:scale-94"
                           style={{
                             background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
                             backdropFilter: 'blur(16px)',
@@ -1763,7 +1763,7 @@ export default function DailyTripReportApp(){
                           }
                         }}
                         disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                        className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl flex items-center justify-center active:scale-94"
+                        className="w-20 h-20 md:w-24 md:h-24 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl md:text-3xl flex items-center justify-center active:scale-94"
                         style={{
                           background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
                           backdropFilter: 'blur(16px)',
@@ -1783,7 +1783,7 @@ export default function DailyTripReportApp(){
                           }
                         }}
                         disabled={accountLockedUntil !== null && Date.now() < accountLockedUntil}
-                        className="w-20 h-20 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl flex items-center justify-center active:scale-94"
+                        className="w-20 h-20 md:w-24 md:h-24 rounded-full transition-all duration-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white font-normal text-2xl md:text-3xl flex items-center justify-center active:scale-94"
                         style={{
                           background: 'radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 80%), rgba(255,255,255,0.06)',
                           backdropFilter: 'blur(16px)',
