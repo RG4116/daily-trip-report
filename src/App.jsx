@@ -544,6 +544,7 @@ export default function DailyTripReportApp(){
   const [accountLockedUntil, setAccountLockedUntil] = useState(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(() => localStorage.getItem('dontShowWelcomeModal') !== 'true');
   const [isPinVerified, setIsPinVerified] = useState(() => sessionStorage.getItem('tripReportPinVerified') === 'true');
+  const [isCustomTruck, setIsCustomTruck] = useState(false); // Track if user is entering custom truck
   const driverProfileKey = 'tripReportDriverProfile';
   const lockoutDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
   const maxFailedAttempts = 3;
@@ -672,7 +673,11 @@ export default function DailyTripReportApp(){
         setDriver(profile.driver);
         setTruck(profile.truck);
         setSelectedDriver(profile.driver);
-        setSelectedTruck(profile.truck);
+        setSelectedTruck(profile.truck); // This will preserve custom truck numbers
+        // Set custom flag if truck is not in predefined list
+        if (profile.truck && !truckOptions.includes(profile.truck)) {
+          setIsCustomTruck(true);
+        }
         // If PIN is not verified yet, show PIN modal
         if (!isPinVerified) {
           setShowDriverSelect(true);
@@ -741,6 +746,14 @@ export default function DailyTripReportApp(){
     setPinError('');
     setFailedAttempts(0);
     setAccountLockedUntil(null);
+    // Preserve current truck value (including custom ones)
+    setSelectedTruck(truck);
+    // Set custom flag if truck is not in predefined list
+    if (truck && !truckOptions.includes(truck)) {
+      setIsCustomTruck(true);
+    } else {
+      setIsCustomTruck(false);
+    }
     setShowDriverSelect(true);
   };
 
@@ -1693,17 +1706,55 @@ export default function DailyTripReportApp(){
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-800 mb-2">Truck Number</label>
-                <select
-                  value={selectedTruck}
-                  onChange={(e) => setSelectedTruck(e.target.value)}
-                  disabled={showPinInput}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-300 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
-                >
-                  <option value="">Choose your truck...</option>
-                  {[...truckOptions].sort().map((truck) => (
-                    <option key={truck} value={truck}>{truck}</option>
-                  ))}
-                </select>
+                {isCustomTruck || (selectedTruck && !truckOptions.includes(selectedTruck)) ? (
+                  // Custom truck number input mode
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={selectedTruck}
+                      onChange={(e) => setSelectedTruck(e.target.value.replace(/[^0-9]/g,""))}
+                      disabled={showPinInput}
+                      placeholder="Enter truck number..."
+                      autoComplete="off"
+                      autoFocus
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-300 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTruck('');
+                        setIsCustomTruck(false);
+                      }}
+                      disabled={showPinInput}
+                      className="text-xs text-blue-600 hover:text-blue-700 underline disabled:opacity-50"
+                    >
+                      ← Back to truck list
+                    </button>
+                  </div>
+                ) : (
+                  // Dropdown selection mode
+                  <select
+                    value={selectedTruck}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setSelectedTruck('');
+                        setIsCustomTruck(true); // Switch to custom input mode
+                      } else {
+                        setSelectedTruck(e.target.value);
+                        setIsCustomTruck(false);
+                      }
+                    }}
+                    disabled={showPinInput}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-300 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
+                  >
+                    <option value="">Choose your truck...</option>
+                    {[...truckOptions].sort().map((truck) => (
+                      <option key={truck} value={truck}>{truck}</option>
+                    ))}
+                    <option value="__custom__">🔧 Other (custom number)</option>
+                  </select>
+                )}
               </div>
             </div>
             
