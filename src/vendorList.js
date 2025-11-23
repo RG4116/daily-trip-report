@@ -21,6 +21,7 @@ export const vendorList = [
   "Motul",
   "PEAK",
   "Phillips 66",
+  "Pilot J Walker Rd.",
   "Kendall",
   "Red Line",
   "Royal Purple",
