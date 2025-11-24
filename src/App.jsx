@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./global.css";
 import { fetchTrailersFromSheet, saveTrailerToSheet, getPlateForTrailer, initializeTrailerData } from "./googleSheetsService";
 
@@ -767,6 +767,24 @@ export default function DailyTripReportApp(){
       return () => clearTimeout(timer);
     }
   }, [enteredPin, showPinInput, selectedDriver]);
+
+  // Handle truck dropdown change with stable state management
+  const handleTruckChange = useCallback((value) => {
+    if (value === '__custom__') {
+      // Immediately switch modes - both state updates happen in same render cycle
+      setIsCustomTruck(true);
+      setSelectedTruck('');
+    } else {
+      setIsCustomTruck(false);
+      setSelectedTruck(value);
+    }
+  }, []);
+
+  // Handle back to truck list
+  const handleBackToTruckList = useCallback(() => {
+    setIsCustomTruck(false);
+    setSelectedTruck('');
+  }, []);
 
   // Lock screen to portrait orientation when PIN pad is shown
   useEffect(() => {
@@ -1706,9 +1724,9 @@ export default function DailyTripReportApp(){
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-800 mb-2">Truck Number</label>
-                {isCustomTruck || (selectedTruck && !truckOptions.includes(selectedTruck)) ? (
+                {isCustomTruck ? (
                   // Custom truck number input mode
-                  <div className="space-y-2">
+                  <div key="custom-truck-input" className="space-y-2">
                     <input
                       type="text"
                       inputMode="numeric"
@@ -1717,15 +1735,11 @@ export default function DailyTripReportApp(){
                       disabled={showPinInput}
                       placeholder="Enter truck number..."
                       autoComplete="off"
-                      autoFocus
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-300 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedTruck('');
-                        setIsCustomTruck(false);
-                      }}
+                      onClick={handleBackToTruckList}
                       disabled={showPinInput}
                       className="text-xs text-blue-600 hover:text-blue-700 underline disabled:opacity-50"
                     >
@@ -1735,14 +1749,12 @@ export default function DailyTripReportApp(){
                 ) : (
                   // Dropdown selection mode
                   <select
-                    value={selectedTruck}
+                    key="truck-dropdown"
+                    value={selectedTruck || ''}
                     onChange={(e) => {
-                      if (e.target.value === '__custom__') {
-                        setSelectedTruck('');
-                        setIsCustomTruck(true); // Switch to custom input mode
-                      } else {
-                        setSelectedTruck(e.target.value);
-                        setIsCustomTruck(false);
+                      const val = e.target.value;
+                      if (val) { // Only handle non-empty values
+                        handleTruckChange(val);
                       }
                     }}
                     disabled={showPinInput}
