@@ -1071,6 +1071,18 @@ export default function DailyTripReportApp(){
     });
   };
   const togglePW=(v)=>setPaperwork(p=>p.includes(v)?p.filter(x=>x!==v):[...p,v]);
+
+  // Auto-select "Fuel Ticket" when any row has both liters and fuel vendor filled
+  useEffect(() => {
+    const hasFuel = rows.some(r => r.l && String(r.l).trim() !== '' && r.fv && String(r.fv).trim() !== '');
+    setPaperwork(p => {
+      const has = p.includes('Fuel Ticket');
+      if (hasFuel && !has) return [...p, 'Fuel Ticket'];
+      if (!hasFuel && has) return p.filter(x => x !== 'Fuel Ticket');
+      return p;
+    });
+  }, [rows]);
+
   // Enhanced setRow to handle tollType toggle and km transfer
   // Link odometer values and handle tollType toggle
   // ...existing code...
@@ -2570,14 +2582,29 @@ export default function DailyTripReportApp(){
 
 
 
-        <div>
-          <div className="mb-2 text-sm font-medium">PAPERWORK ATTACHED</div>
-          {PAPERWORK_OPTIONS.map(v=>(
-            <label key={v} className="mr-4 inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={paperwork.includes(v)} onChange={()=>togglePW(v)}/>
-              {v}
-            </label>
-          ))}
+        <div className="px-4 pb-4">
+          <div className="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Paperwork Attached</div>
+          <div className="flex flex-wrap gap-2">
+            {PAPERWORK_OPTIONS.map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => togglePW(v)}
+                className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] select-none ${
+                  paperwork.includes(v)
+                    ? 'border-blue-600 bg-blue-600 text-white shadow-md'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center text-xs font-bold transition-all ${
+                  paperwork.includes(v) ? 'border-white bg-white text-blue-600' : 'border-gray-300 bg-white'
+                }`}>
+                  {paperwork.includes(v) ? '✓' : ''}
+                </span>
+                {v}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Notes section */}
@@ -2592,39 +2619,17 @@ export default function DailyTripReportApp(){
           />
         </div>
 
-        {/* Signature section moved to bottom above action buttons */}
-        <div className="mt-6 mb-6">
-          <label className="mb-1 block text-sm">Signature</label>
-          <div
-            className="signature-container rounded-xl border border-gray-300 shadow bg-white p-3 mb-2"
-            style={{
-              margin: 12,
-              padding: 8,
-              maxWidth: '100%',
-              boxSizing: 'border-box',
+        {/* Signature section */}
+        <div className="mt-4 mb-6 px-4">
+          <label className="mb-2 block text-sm font-semibold text-gray-700">Driver Signature</label>
+          <SignatureMode
+            value={sig}
+            onChange={(dataUrl, audit) => {
+              setSig(dataUrl);
+              setSigAudit(audit);
             }}
-          >
-            <div style={{ width: '100%', maxWidth: 400, margin: '0 auto' }}>
-              <SignatureMode
-                value={sig}
-                onChange={(dataUrl, audit) => {
-                  setSig(dataUrl);
-                  setSigAudit(audit);
-                }}
-                readOnly={false}
-                buttonProps={{
-                  type: "button",
-                  className: "mt-4 flex items-center gap-2 rounded-md px-4 py-2 bg-gray-800 text-white hover:bg-gray-900",
-                  style: { fontWeight: 500 },
-                  children: <>
-                    <span style={{ display: 'inline-block', color: '#ffffff', fontSize: '1.4em', fontWeight: 700, background: 'none', boxShadow: 'none' }}>+</span>
-                    <span style={{ color: '#ffffff', fontWeight: 500 }}>Add Signature</span>
-                  </>
-                }}
-              />
-            </div>
-          </div>
-          {/* Signature certification checkbox removed as requested */}
+            readOnly={false}
+          />
         </div>
 
         <div className="flex flex-wrap gap-3 justify-start">
