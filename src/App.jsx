@@ -2260,14 +2260,17 @@ export default function DailyTripReportApp(){
                               </div>
                             </div>
                           ) : (
-                            <div className="text-gray-600 bg-gray-50 px-1 py-0.5 rounded border border-gray-200 flex justify-between items-center group">
-                              <span className="truncate"><span className="text-gray-500 text-xs">Plate:</span> <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
+                            <div className="flex justify-between items-center gap-1 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
+                              <span className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-blue-400 text-xs font-medium shrink-0">🪪</span>
+                                <span className="font-bold text-blue-900 text-sm tracking-wide truncate">{displayedPlates[i]}</span>
+                              </span>
                               <button
                                 onClick={() => {
                                   setEditingPlateIndex(i);
                                   setPlateInput(displayedPlates[i]);
                                 }}
-                                className="text-gray-500 hover:text-blue-600 transition-opacity ml-1"
+                                className="text-blue-400 hover:text-blue-700 transition-colors ml-1 shrink-0"
                                 title="Edit plate"
                                 type="button"
                               >
@@ -2405,14 +2408,17 @@ export default function DailyTripReportApp(){
                           </div>
                         </div>
                       ) : (
-                        <div className="text-gray-600 bg-gray-50 px-1 py-0.5 rounded border border-gray-200 flex justify-between items-center group">
-                          <span className="truncate"><span className="text-gray-500 text-xs">Plate:</span> <span className="font-semibold text-gray-900">{displayedPlates[i]}</span></span>
+                        <div className="flex justify-between items-center gap-1 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-blue-400 text-xs font-medium shrink-0">🪪</span>
+                            <span className="font-bold text-blue-900 text-sm tracking-wide truncate">{displayedPlates[i]}</span>
+                          </span>
                           <button
                             onClick={() => {
                               setEditingPlateIndex(i);
                               setPlateInput(displayedPlates[i]);
                             }}
-                            className="text-gray-500 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                            className="text-blue-400 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-all ml-1 shrink-0"
                             title="Edit plate"
                             type="button"
                           >
