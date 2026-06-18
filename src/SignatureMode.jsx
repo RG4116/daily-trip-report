@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { Icon } from "./components/Icons";
 
 function getSHA256(str) {
   if (window.crypto && window.crypto.subtle) {
@@ -151,16 +152,17 @@ export function SignatureMode({ value, onChange, readOnly, onModeChange }) {
               <button
                 type="button"
                 onClick={openModal}
-                className="px-3 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-xs font-semibold shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
+                className="px-3 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-xs font-semibold shadow-sm hover:bg-gray-50 active:scale-95 transition-all inline-flex items-center gap-1.5"
               >
-                ✏️ Edit
+                <Icon name="edit" size={14} /> Edit
               </button>
               <button
                 type="button"
                 onClick={handleRemove}
-                className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-500 text-xs font-semibold shadow-sm hover:bg-red-50 active:scale-95 transition-all"
+                className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-500 text-xs font-semibold shadow-sm hover:bg-red-50 active:scale-95 transition-all inline-flex items-center justify-center"
+                aria-label="Remove signature"
               >
-                🗑️
+                <Icon name="trash" size={14} />
               </button>
             </div>
           )}
@@ -172,7 +174,7 @@ export function SignatureMode({ value, onChange, readOnly, onModeChange }) {
             onClick={openModal}
             className="w-full h-20 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 active:bg-blue-100 transition-all"
           >
-            <span className="text-2xl leading-none">✍️</span>
+            <Icon name="pen" size={28} className="text-gray-400" />
             <span className="text-sm font-semibold">Tap to sign</span>
           </button>
         )
@@ -203,9 +205,10 @@ export function SignatureMode({ value, onChange, readOnly, onModeChange }) {
               <button
                 type="button"
                 onClick={closeModal}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 text-xl font-bold leading-none"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                aria-label="Close"
               >
-                ×
+                <Icon name="x" size={18} />
               </button>
             </div>
 
@@ -229,9 +232,10 @@ export function SignatureMode({ value, onChange, readOnly, onModeChange }) {
 
                 {/* Empty hint overlay */}
                 {!hasDrawn && (
-                  <div className="absolute inset-0 flex items-center justify-center pb-8 pointer-events-none">
+                  <div className="absolute inset-0 flex items-center justify-center pb-8 pointer-events-none gap-2">
+                    <Icon name="pen" size={20} className="text-gray-200" />
                     <span className="text-gray-200 text-base font-medium select-none">
-                      ✍️  Draw here
+                      Draw here
                     </span>
                   </div>
                 )}
@@ -262,22 +266,22 @@ export function SignatureMode({ value, onChange, readOnly, onModeChange }) {
               <button
                 type="button"
                 onClick={handleClear}
-                className="flex-1 py-3.5 rounded-xl border-2 border-gray-200 bg-white text-gray-600 font-semibold text-sm active:scale-95 transition-all hover:bg-gray-50"
+                className="flex-1 py-3.5 rounded-xl border-2 border-gray-200 bg-white text-gray-600 font-semibold text-sm active:scale-95 transition-all hover:bg-gray-50 inline-flex items-center justify-center gap-2"
               >
-                🗑️  Clear
+                <Icon name="trash" size={16} /> Clear
               </button>
               <button
                 type="button"
                 onClick={handleConfirm}
                 disabled={!hasDrawn}
-                className={`py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+                className={`py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95 inline-flex items-center justify-center gap-2 ${
                   hasDrawn
                     ? "bg-gray-900 text-white hover:bg-black shadow-md"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
                 style={{ flex: 2 }}
               >
-                ✓  Confirm Signature
+                <Icon name="check" size={16} /> Confirm Signature
               </button>
             </div>
           </div>

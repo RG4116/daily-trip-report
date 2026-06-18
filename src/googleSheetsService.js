@@ -22,20 +22,20 @@ export const fetchTrailersFromSheet = async () => {
     // This avoids needing authentication for public sheets
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
     
-    console.log('📥 Fetching trailers from Google Sheet...');
+    console.log('[FETCH] Loading trailers from Google Sheet...');
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: Failed to fetch trailers from Google Sheet`);
     }
     
     const csv = await response.text();
-    console.log('📄 Raw CSV received:', csv.substring(0, 200)); // Log first 200 chars for debugging
+    console.log('[CSV] Raw CSV received:', csv.substring(0, 200)); // Log first 200 chars for debugging
     
     const trailers = {};
     const lines = csv.trim().split('\n');
     
     if (lines.length < 2) {
-      console.warn('⚠️ Google Sheet appears to be empty (no data rows)');
+      console.warn('[WARN] Google Sheet appears to be empty (no data rows)');
       return {};
     }
     
@@ -52,19 +52,19 @@ export const fetchTrailersFromSheet = async () => {
       
       if (trailerNo && plateNo) {
         trailers[trailerNo] = plateNo;
-        console.log(`  ✓ Loaded: "${trailerNo}" → "${plateNo}"`);
+        console.log(`  [OK] Loaded: "${trailerNo}" -> "${plateNo}"`);
       }
     }
     
     if (Object.keys(trailers).length === 0) {
-      console.warn('⚠️ No valid trailer/plate pairs found in Google Sheet');
+      console.warn('[WARN] No valid trailer/plate pairs found in Google Sheet');
     } else {
-      console.log(`✅ ${Object.keys(trailers).length} trailers loaded from Google Sheet:`, trailers);
+      console.log(`[OK] ${Object.keys(trailers).length} trailers loaded from Google Sheet:`, trailers);
     }
     
     return trailers;
   } catch (error) {
-    console.error('❌ Error fetching trailers from Google Sheet:', error.message);
+    console.error('[ERROR] Failed to fetch trailers from Google Sheet:', error.message);
     return {};
   }
 };
@@ -82,11 +82,11 @@ export const saveTrailerToSheet = async (trailerNo, plateNo) => {
     localTrailers[trailerNo] = plateNo;
     localStorage.setItem('localTrailers', JSON.stringify(localTrailers));
     
-    console.log(`✅ Trailer ${trailerNo} (${plateNo}) saved locally`);
+    console.log(`[OK] Trailer ${trailerNo} (${plateNo}) saved locally`);
     
     // Now sync to Google Sheet via webhook
     try {
-      const response = await fetch(WEBHOOK_URL, {
+      await fetch(WEBHOOK_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: {
@@ -98,15 +98,15 @@ export const saveTrailerToSheet = async (trailerNo, plateNo) => {
         })
       });
       
-      console.log(`✅ Plate ${plateNo} synced to Google Sheet for trailer ${trailerNo}`);
+      console.log(`[OK] Plate ${plateNo} synced to Google Sheet for trailer ${trailerNo}`);
     } catch (webhookError) {
-      console.warn(`⚠️ Webhook sync failed (will retry on next page load):`, webhookError);
+      console.warn('[WARN] Webhook sync failed (will retry on next page load):', webhookError);
       // Plate is saved locally, will sync on next load via initializeTrailerData
     }
     
     return true;
   } catch (error) {
-    console.error('❌ Error saving trailer:', error);
+    console.error('[ERROR] Failed to save trailer:', error);
     return false;
   }
 };
@@ -149,10 +149,10 @@ export const initializeTrailerData = async () => {
     const merged = { ...localData, ...sheetsData };
     localStorage.setItem('localTrailers', JSON.stringify(merged));
     
-    console.log('✅ Trailer data initialized:', merged);
+    console.log('[OK] Trailer data initialized:', merged);
     return merged;
   } catch (error) {
-    console.error('❌ Error initializing trailer data:', error);
+    console.error('[ERROR] Failed to initialize trailer data:', error);
     return {};
   }
 };

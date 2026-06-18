@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
+import { Icon } from './components/Icons';
 
 const LS_KEY = 'tripReportData';
 const NUM_ROWS = 8;
@@ -210,7 +211,7 @@ export default function DailyTripReportFormPreview() {
                 return (
                   <span key={item} className="inline-flex items-center">
                     <span className="w-3.5 h-3.5 border border-gray-400 mr-1 flex items-center justify-center text-[9px] leading-[9px]">
-                      {checked ? '✓' : ''}
+                      {checked ? <Icon name="check" size={9} strokeWidth={3} /> : null}
                     </span>
                     <span className="uppercase text-[12px] tracking-tight">{item}</span>
                   </span>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./global.css";
+import { Icon, ToastIcon } from "./components/Icons";
 import { fetchTrailersFromSheet, saveTrailerToSheet, getPlateForTrailer, initializeTrailerData } from "./googleSheetsService";
 
 // Driver PIN hashes (base64 encoded - 4 digits)
@@ -610,12 +611,12 @@ export default function DailyTripReportApp(){
   // Export current form data (blocked if validation fails)
   const handleExport = () => {
     if(!isFormValidForExport){
-      showNotification('❌ Please fill all required fields', 'error', 4000);
+      showNotification('Please fill all required fields', 'error', 4000);
       return;
     }
     const currentData = { carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines };
     exportFormData(currentData);
-    showNotification('✅ Data exported successfully!', 'success');
+    showNotification('Data exported successfully!', 'success');
   };
   
   // Import form data
@@ -641,12 +642,12 @@ export default function DailyTripReportApp(){
         setExtraLines(importedData.extraLines || []);
         
         setImportSuccess('Data imported successfully!');
-        showNotification('✅ Data imported successfully!', 'success');
+        showNotification('Data imported successfully!', 'success');
         setTimeout(() => setImportSuccess(''), 3000);
       },
       (error) => {
         setImportError(error);
-        showNotification('❌ Import failed: ' + error, 'error', 5000);
+        showNotification('Import failed: ' + error, 'error', 5000);
         setTimeout(() => setImportError(''), 5000);
       }
     );
@@ -719,7 +720,7 @@ export default function DailyTripReportApp(){
   // Save driver profile and verify PIN
   const saveDriverProfile = () => {
     if (!selectedDriver.trim() || !selectedTruck.trim()) {
-      showNotification('❌ Please select both driver name and truck number', 'error', 3000);
+      showNotification('Please select both driver name and truck number', 'error', 3000);
       return;
     }
 
@@ -802,7 +803,7 @@ export default function DailyTripReportApp(){
       const now = Date.now();
       if (now < accountLockedUntil) {
         const remainingSeconds = Math.ceil((accountLockedUntil - now) / 1000);
-        setPinError(`🔒 Account locked for ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''}`);
+        setPinError(`Account locked for ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''}`);
         return;
       }
     }
@@ -818,11 +819,11 @@ export default function DailyTripReportApp(){
         // Lock the account
         const lockUntil = Date.now() + lockoutDuration;
         setAccountLockedUntil(lockUntil);
-        setPinError('🔒 Account locked for 5 minutes due to too many failed attempts');
+        setPinError('Account locked for 5 minutes due to too many failed attempts');
         setEnteredPin('');
       } else {
         const attemptsRemaining = maxFailedAttempts - newFailedCount;
-        setPinError(`❌ Incorrect PIN (${attemptsRemaining} attempt${attemptsRemaining !== 1 ? 's' : ''} remaining)`);
+        setPinError(`Incorrect PIN (${attemptsRemaining} attempt${attemptsRemaining !== 1 ? 's' : ''} remaining)`);
         setEnteredPin('');
       }
       return;
@@ -846,7 +847,7 @@ export default function DailyTripReportApp(){
     setFailedAttempts(0);
     setAccountLockedUntil(null);
     
-    showNotification('✅ Driver authenticated!', 'success');
+    showNotification('Driver authenticated!', 'success');
   };
   useEffect(() => {
     if (didRestore.current) return;
@@ -919,7 +920,7 @@ export default function DailyTripReportApp(){
   // Google Sheets - Handle plate management (no caching, always fresh)
   const addPlateForTrailer = async (index, trailerNo) => {
     if (!plateInput.trim()) {
-      showNotification('❌ Please enter a plate number', 'error', 2000);
+      showNotification('Please enter a plate number', 'error', 2000);
       return;
     }
     
@@ -929,15 +930,15 @@ export default function DailyTripReportApp(){
     setDisplayedPlates(p => ({ ...p, [index]: plateValue }));
     setPlateInput('');
     setAddingPlateIndex(null);
-    showNotification(`✅ Plate ${plateValue} saved for trailer ${trailerNo}!`, 'success', 3000);
+    showNotification(`Plate ${plateValue} saved for trailer ${trailerNo}!`, 'success', 3000);
     
     // Save to Google Sheet immediately and wait for confirmation
     try {
       await saveTrailerToSheet(trailerNo, plateValue);
-      console.log('✅ Plate synced to Google Sheets');
+      console.log('Plate synced to Google Sheets');
     } catch (error) {
       console.error('Error syncing plate to Google Sheet:', error);
-      showNotification('⚠️ Failed to sync plate to Google Sheets', 'error', 3000);
+      showNotification('Failed to sync plate to Google Sheets', 'warning', 3000);
       // Revert UI on error
       setDisplayedPlates(p => {
         const updated = { ...p };
@@ -949,7 +950,7 @@ export default function DailyTripReportApp(){
 
   const editPlateForTrailer = async (index, trailerNo, newPlate) => {
     if (!newPlate.trim()) {
-      showNotification('❌ Please enter a plate number', 'error', 2000);
+      showNotification('Please enter a plate number', 'error', 2000);
       return;
     }
 
@@ -959,15 +960,15 @@ export default function DailyTripReportApp(){
     setDisplayedPlates(p => ({ ...p, [index]: newPlate }));
     setPlateInput('');
     setEditingPlateIndex(null);
-    showNotification(`✅ Plate updated to ${newPlate}!`, 'success', 3000);
+    showNotification(`Plate updated to ${newPlate}!`, 'success', 3000);
     
     // Save to Google Sheet immediately and wait for confirmation
     try {
       await saveTrailerToSheet(trailerNo, newPlate);
-      console.log('✅ Plate synced to Google Sheets');
+      console.log('Plate synced to Google Sheets');
     } catch (error) {
       console.error('Error syncing plate to Google Sheet:', error);
-      showNotification('⚠️ Failed to sync plate to Google Sheets', 'error', 3000);
+      showNotification('Failed to sync plate to Google Sheets', 'warning', 3000);
       // Revert UI on error
       if (oldPlate) {
         setDisplayedPlates(p => ({ ...p, [index]: oldPlate }));
@@ -1498,10 +1499,10 @@ export default function DailyTripReportApp(){
 
   const downloadPdf = async () => {
     if(!isFormValidForExport){
-      showNotification('❌ Please fill all required fields', 'error', 4000);
+      showNotification('Please fill all required fields', 'error', 4000);
       return;
     }
-    if (window.confirm('⚠️ Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
+    if (window.confirm('Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
       try {
         localStorage.removeItem(LS_KEY);
         const blob = await buildFinalPdfBlob();
@@ -1516,11 +1517,11 @@ export default function DailyTripReportApp(){
         setPlateInput('');
         setEditingPlateIndex(null);
         setAddingPlateIndex(null);
-        showNotification('📥 PDF downloaded successfully!', 'success');
+        showNotification('PDF downloaded successfully!', 'success');
         setTimeout(() => URL.revokeObjectURL(url), 60000);
       } catch (error) {
         console.error("Failed to download PDF:", error);
-        showNotification('❌ Failed to download PDF', 'error', 4000);
+        showNotification('Failed to download PDF', 'error', 4000);
       }
     }
   };
@@ -1538,15 +1539,15 @@ export default function DailyTripReportApp(){
         // fallback: same tab
         window.location.href = url;
       }
-      showNotification('📖 PDF opened in new tab', 'success');
+      showNotification('PDF opened in new tab', 'success');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
       console.error("Failed to open PDF:", error);
-      showNotification('❌ Failed to open PDF', 'error', 4000);
+      showNotification('Failed to open PDF', 'error', 4000);
     }
   };
   const resetAll = () => {
-    if (window.confirm('⚠️ Resetting the form will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
+    if (window.confirm('Resetting the form will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
       // Reset form data but KEEP driver profile in localStorage
       localStorage.removeItem(LS_KEY);
       // DO NOT remove driverProfileKey - keep driver profile saved
@@ -1568,7 +1569,7 @@ export default function DailyTripReportApp(){
       setPinError('');
       setFailedAttempts(0);
       setAccountLockedUntil(null);
-      showNotification('♻️ Form reset successfully. Driver profile saved.', 'info');
+      showNotification('Form reset successfully. Driver profile saved.', 'info');
     }
   };
 
@@ -1576,12 +1577,14 @@ export default function DailyTripReportApp(){
     <div className="mx-auto max-w-5xl p-4">
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-4 right-4 px-4 py-3 rounded-lg text-white shadow-lg animate-pulse z-50 ${
+        <div className={`fixed top-4 right-4 px-4 py-3 rounded-lg text-white shadow-lg z-50 flex items-center gap-2 ${
           toast.type === 'success' ? 'bg-green-500' : 
           toast.type === 'error' ? 'bg-red-500' : 
+          toast.type === 'warning' ? 'bg-amber-500' :
           'bg-blue-500'
         }`}>
-          {toast.message}
+          <ToastIcon type={toast.type} />
+          <span>{toast.message}</span>
         </div>
       )}
       
@@ -1605,8 +1608,8 @@ export default function DailyTripReportApp(){
             <div className="space-y-2 sm:space-y-4 mb-6 sm:mb-8">
               {/* Feature 1 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
-                  ✓
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 mt-0.5">
+                  <Icon name="check" size={12} strokeWidth={3} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Aligned Form Layout</h3>
@@ -1618,8 +1621,8 @@ export default function DailyTripReportApp(){
               
               {/* Feature 2 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
-                  ✓
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 mt-0.5">
+                  <Icon name="check" size={12} strokeWidth={3} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Smart Plate Management</h3>
@@ -1631,8 +1634,8 @@ export default function DailyTripReportApp(){
               
               {/* Feature 3 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
-                  ✓
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 mt-0.5">
+                  <Icon name="check" size={12} strokeWidth={3} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Secure PIN Login</h3>
@@ -1644,8 +1647,8 @@ export default function DailyTripReportApp(){
               
               {/* Feature 4 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
-                  ✓
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 mt-0.5">
+                  <Icon name="check" size={12} strokeWidth={3} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Mobile Optimized</h3>
@@ -1657,8 +1660,8 @@ export default function DailyTripReportApp(){
               
               {/* Feature 5 */}
               <div className="flex gap-2 sm:gap-3">
-                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm mt-0.5">
-                  ✓
+                <div className="flex-shrink-0 flex items-start justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-gray-200 text-gray-700 mt-0.5">
+                  <Icon name="check" size={12} strokeWidth={3} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Flexible Weight Options</h3>
@@ -1711,7 +1714,7 @@ export default function DailyTripReportApp(){
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl">👤</span>
+              <Icon name="user" size={32} className="text-gray-700" />
               <h3 className="text-2xl font-bold text-gray-900">Select Your Profile</h3>
             </div>
             <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 mb-6">
@@ -1776,7 +1779,7 @@ export default function DailyTripReportApp(){
                     {[...truckOptions].sort().map((truck) => (
                       <option key={truck} value={truck}>{truck}</option>
                     ))}
-                    <option value="__custom__">🔧 Other (custom number)</option>
+                    <option value="__custom__">Other (custom number)</option>
                   </select>
                 )}
               </div>
@@ -1886,16 +1889,17 @@ export default function DailyTripReportApp(){
                   }}
                   title="Backspace"
                 >
-                  ⌫
+                  <Icon name="delete-key" size={22} />
                 </button>
               </div>
             </div>
 
             {/* Error Message */}
             {pinError && (
-              <div className={`text-center font-medium mb-6 px-6 py-3 rounded-lg ${
-                pinError.includes('🔒') ? 'bg-red-900 text-red-100' : 'bg-red-800 text-red-100'
+              <div className={`text-center font-medium mb-6 px-6 py-3 rounded-lg flex items-center justify-center gap-2 ${
+                pinError.includes('Account locked') ? 'bg-red-900 text-red-100' : 'bg-red-800 text-red-100'
               }`}>
+                {pinError.includes('Account locked') ? <Icon name="lock" size={16} /> : <Icon name="x-circle" size={16} />}
                 {pinError}
               </div>
             )}
@@ -2000,16 +2004,17 @@ export default function DailyTripReportApp(){
                     }}
                     title="Backspace"
                   >
-                    ⌫
+                    <Icon name="delete-key" size={22} />
                   </button>
                 </div>
               </div>
 
               {/* Error Message */}
               {pinError && (
-                <div className={`text-center font-medium px-3 py-0.5 rounded-lg text-xs ${
-                  pinError.includes('🔒') ? 'bg-red-900 text-red-100' : 'bg-red-800 text-red-100'
+                <div className={`text-center font-medium px-3 py-0.5 rounded-lg text-xs flex items-center justify-center gap-1.5 ${
+                  pinError.includes('Account locked') ? 'bg-red-900 text-red-100' : 'bg-red-800 text-red-100'
                 }`}>
+                  {pinError.includes('Account locked') ? <Icon name="lock" size={12} /> : <Icon name="x-circle" size={12} />}
                   {pinError}
                 </div>
               )}
@@ -2035,20 +2040,20 @@ export default function DailyTripReportApp(){
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl">✨</span>
+              <Icon name="sparkles" size={32} className="text-amber-500" />
               <h3 className="text-xl font-bold text-gray-900">What's New!</h3>
             </div>
             <div className="text-gray-700 text-sm space-y-4 mb-6">
               <p className="flex items-start gap-2">
-                <span className="text-lg">📍</span>
+                <Icon name="map-pin" size={20} className="text-blue-500 mt-0.5" />
                 <span><strong>Better Button Layout:</strong> The "Add Trip" button now appears below each added trip, while "Import" and "Export" buttons have been moved to the bottom of the page for easier access</span>
               </p>
               <p className="flex items-start gap-2">
-                <span className="text-lg">⚡</span>
+                <Icon name="zap" size={20} className="text-amber-500 mt-0.5" />
                 <span><strong>Auto-scroll Feature:</strong> When you click "Add Trip," the new trip automatically scrolls into view so you can start filling it right away</span>
               </p>
               <p className="flex items-start gap-2">
-                <span className="text-lg">📱</span>
+                <Icon name="smartphone" size={20} className="text-gray-600 mt-0.5" />
                 <span><strong>Mobile Optimized:</strong> Improved responsive design for better experience on all devices</span>
               </p>
             </div>
@@ -2056,7 +2061,7 @@ export default function DailyTripReportApp(){
               onClick={() => setShowUpdateNotification(false)}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors mb-3"
             >
-              Got it! 👍
+              Got it! <Icon name="thumbs-up" size={16} className="inline ml-1" />
             </button>
             <div className="pt-4 border-t border-gray-200 text-center">
               <p className="text-xs text-gray-600 mb-2">Questions or feedback?</p>
@@ -2064,7 +2069,7 @@ export default function DailyTripReportApp(){
                 href="mailto:rukanca@gmail.com?subject=Daily Trip Report Feedback"
                 className="text-blue-500 hover:text-blue-600 text-sm font-medium underline"
               >
-                📧 rukanca@gmail.com
+                <Icon name="mail" size={14} className="inline mr-1" /> rukanca@gmail.com
               </a>
             </div>
           </div>
@@ -2075,12 +2080,12 @@ export default function DailyTripReportApp(){
       {isPinVerified && (
       <div className="card">
         <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
-          <span role="img" aria-label="Warning">⚠️</span>
+          <Icon name="warning" size={20} className="text-yellow-700 shrink-0" aria-label="Warning" />
           Your data is saved only for today in this browser. It will be lost if you use Private/Incognito mode, clear cache, switch browsers, change devices, download PDF, or reset the form.
         </div>
         {isIncognito && (
           <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
-            <span role="img" aria-label="Warning">⚠️</span>
+            <Icon name="warning" size={20} className="text-yellow-700 shrink-0" aria-label="Warning" />
             You are using Private/Incognito mode. Your trip data will not be saved after you close this window.
           </div>
         )}
@@ -2091,7 +2096,7 @@ export default function DailyTripReportApp(){
             className="text-sm px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-2 transition-colors"
             title="Change driver profile"
           >
-            <span>👤</span> Change Driver
+            <Icon name="user" size={16} /> Change Driver
           </button>
         </div>
         {(!isFormValidForExport && validationErrors.length>0) && (
@@ -2193,7 +2198,7 @@ export default function DailyTripReportApp(){
 
           <div className="space-y-2">
             {extraLines.length===0 && (
-              <div className="text-sm text-gray-500">No trip details added yet. Tap <span className='font-bold text-blue-600'>➕</span> to add your first trip.</div>
+              <div className="text-sm text-gray-500 flex items-center gap-1">No trip details added yet. Tap <Icon name="plus" size={16} className="text-blue-600 font-bold" /> to add your first trip.</div>
             )}
 
             {extraLines.map((r,i)=>{
@@ -2216,9 +2221,9 @@ export default function DailyTripReportApp(){
                       className="px-2 py-1 text-sm flex items-center gap-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 border border-gray-300 transition-shadow"
                       style={{ boxShadow: '0 1px 4px rgba(120,130,145,0.06)' }}
                     >
-                      <span className="text-base">🗑️</span> <span>Delete</span>
+                      <Icon name="trash" size={16} /> <span>Delete</span>
                     </button>
-                    <span className="text-gray-400 group-open:rotate-180 transition-transform" style={{fontSize: '1.6em', marginLeft: '0.2em'}} aria-label="Expand section">▼</span>
+                    <Icon name="chevronDown" size={20} className="text-gray-400 group-open:rotate-180 transition-transform ml-1" aria-label="Expand section" />
                   </div>
                 </summary>
 
@@ -2246,7 +2251,7 @@ export default function DailyTripReportApp(){
                                   onClick={() => editPlateForTrailer(i, r.trailer, plateInput)}
                                   className="px-2 py-1 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
                                 >
-                                  ✓
+                                  <Icon name="check" size={14} strokeWidth={3} />
                                 </button>
                                 <button
                                   onClick={() => {
@@ -2255,14 +2260,14 @@ export default function DailyTripReportApp(){
                                   }}
                                   className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
                                 >
-                                  ✕
+                                  <Icon name="x" size={14} strokeWidth={3} />
                                 </button>
                               </div>
                             </div>
                           ) : (
                             <div className="flex justify-between items-center gap-1 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
                               <span className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-blue-400 text-xs font-medium shrink-0">🪪</span>
+                                <span className="text-blue-400 shrink-0"><Icon name="id-card" size={14} /></span>
                                 <span className="font-bold text-blue-900 text-sm tracking-wide truncate">{displayedPlates[i]}</span>
                               </span>
                               <button
@@ -2274,13 +2279,13 @@ export default function DailyTripReportApp(){
                                 title="Edit plate"
                                 type="button"
                               >
-                                ✏️
+                                <Icon name="edit" size={14} />
                               </button>
                             </div>
                           )
                         ) : (
                           <div className="bg-yellow-50 border border-yellow-200 rounded p-1 space-y-0.5">
-                            <div className="text-yellow-800">⚠️ No plate found</div>
+                            <div className="text-yellow-800 flex items-center gap-1"><Icon name="warning" size={14} /> No plate found</div>
                             {addingPlateIndex === i ? (
                               <div className="flex gap-1">
                                 <input
@@ -2295,7 +2300,7 @@ export default function DailyTripReportApp(){
                                   onClick={() => addPlateForTrailer(i, r.trailer)}
                                   className="px-1.5 py-0.5 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
                                 >
-                                  ✓
+                                  <Icon name="check" size={14} strokeWidth={3} />
                                 </button>
                                 <button
                                   onClick={() => {
@@ -2304,7 +2309,7 @@ export default function DailyTripReportApp(){
                                   }}
                                   className="px-1.5 py-0.5 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
                                 >
-                                  ✕
+                                  <Icon name="x" size={14} strokeWidth={3} />
                                 </button>
                               </div>
                             ) : (
@@ -2394,7 +2399,7 @@ export default function DailyTripReportApp(){
                               onClick={() => editPlateForTrailer(i, r.trailer, plateInput)}
                               className="px-2 py-1 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
                             >
-                              ✓
+                              <Icon name="check" size={14} strokeWidth={3} />
                             </button>
                             <button
                               onClick={() => {
@@ -2403,14 +2408,14 @@ export default function DailyTripReportApp(){
                               }}
                               className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
                             >
-                              ✕
+                              <Icon name="x" size={14} strokeWidth={3} />
                             </button>
                           </div>
                         </div>
                       ) : (
                         <div className="flex justify-between items-center gap-1 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
                           <span className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-blue-400 text-xs font-medium shrink-0">🪪</span>
+                            <span className="text-blue-400 shrink-0"><Icon name="id-card" size={14} /></span>
                             <span className="font-bold text-blue-900 text-sm tracking-wide truncate">{displayedPlates[i]}</span>
                           </span>
                           <button
@@ -2422,13 +2427,13 @@ export default function DailyTripReportApp(){
                             title="Edit plate"
                             type="button"
                           >
-                            ✏️
+                            <Icon name="edit" size={14} />
                           </button>
                         </div>
                       )
                     ) : (
                       <div className="bg-yellow-50 border border-yellow-200 rounded p-1 space-y-0.5">
-                        <div className="text-yellow-800">⚠️ No plate found</div>
+                        <div className="text-yellow-800 flex items-center gap-1"><Icon name="warning" size={14} /> No plate found</div>
                         {addingPlateIndex === i ? (
                           <div className="flex gap-1">
                             <input
@@ -2443,7 +2448,7 @@ export default function DailyTripReportApp(){
                               onClick={() => addPlateForTrailer(i, r.trailer)}
                               className="px-1.5 py-0.5 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 whitespace-nowrap"
                             >
-                              ✓
+                              <Icon name="check" size={14} strokeWidth={3} />
                             </button>
                             <button
                               onClick={() => {
@@ -2452,7 +2457,7 @@ export default function DailyTripReportApp(){
                               }}
                               className="px-1.5 py-0.5 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 whitespace-nowrap"
                             >
-                              ✕
+                              <Icon name="x" size={14} strokeWidth={3} />
                             </button>
                           </div>
                         ) : (
@@ -2570,7 +2575,7 @@ export default function DailyTripReportApp(){
                 title="Add New Trip Detail"
                 aria-label="Add New Trip Detail"
               >
-                <span className="text-xl">➕</span> <span>{extraLines.length > 0 ? `Add Trip #${extraLines.length + 1}` : 'Add Trip Detail'}</span>
+                <Icon name="plus" size={20} /> <span>{extraLines.length > 0 ? `Add Trip #${extraLines.length + 1}` : 'Add Trip Detail'}</span>
                 <style>{`
                   .clicked {
                     animation: rippleBtn 0.35s linear;
@@ -2605,7 +2610,7 @@ export default function DailyTripReportApp(){
                 <span className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center text-xs font-bold transition-all ${
                   paperwork.includes(v) ? 'border-white bg-white text-blue-600' : 'border-gray-300 bg-white'
                 }`}>
-                  {paperwork.includes(v) ? '✓' : ''}
+                  {paperwork.includes(v) ? <Icon name="check" size={10} strokeWidth={3} /> : null}
                 </span>
                 {v}
               </button>
@@ -2640,7 +2645,7 @@ export default function DailyTripReportApp(){
 
         <div className="flex flex-wrap gap-3 justify-start">
           <button type="button" onClick={downloadPdf} disabled={!isFormValidForExport} className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] ${isFormValidForExport? 'bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95':'text-gray-500 cursor-not-allowed bg-gray-300 border border-gray-400'}`} style={{boxShadow: isFormValidForExport ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'}}>
-            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Download PDF">📥</span>
+            <Icon name="download" size={20} aria-label="Download PDF" />
             <span>Download</span>
           </button>
           <button
@@ -2650,7 +2655,7 @@ export default function DailyTripReportApp(){
             title="Export current form data to JSON file"
             disabled={!isFormValidForExport}
           >
-            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Export">📤</span>
+            <Icon name="upload" size={20} aria-label="Export" />
             <span>Export</span>
           </button>
           <button
@@ -2659,7 +2664,7 @@ export default function DailyTripReportApp(){
             style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}
             title="Import form data from JSON file"
           >
-            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Import">📂</span>
+            <Icon name="folder-open" size={20} aria-label="Import" />
             <span>Import</span>
           </button>
           <input
@@ -2670,15 +2675,15 @@ export default function DailyTripReportApp(){
             className="hidden"
           />
           <button type="button" onClick={openPdf} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
-            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Open PDF in New Tab">📖</span>
+            <Icon name="book-open" size={20} aria-label="Open PDF in New Tab" />
             <span>Open PDF</span>
           </button>
           <button type="button" onClick={sendByEmail} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
-            <span style={{fontSize: '1.3em', display: 'inline-block'}} aria-label="Send by Email">✉️</span>
+            <Icon name="mail" size={20} aria-label="Send by Email" />
             <span>Email</span>
           </button>
           <button type="button" onClick={resetAll} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-red-600 border border-red-700 text-white hover:bg-red-700 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
-            <span style={{fontSize: '1.3em', display: 'inline-block', color: '#ffffff'}} aria-label="Reset">↻</span>
+            <Icon name="refresh" size={20} className="text-white" aria-label="Reset" />
             <span>Reset</span>
           </button>
         </div>
