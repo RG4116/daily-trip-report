@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./global.css";
 import { Icon, ToastIcon } from "./components/Icons";
-import { fetchTrailersFromSheet, saveTrailerToSheet, getPlateForTrailer, initializeTrailerData } from "./googleSheetsService";
+import { saveTrailerToSheet, getTrailerPlateMap, lookupPlate, initializeTrailerData } from "./googleSheetsService";
 
 // Driver PIN hashes (base64 encoded - 4 digits)
 const DRIVER_PIN_HASHES = {
@@ -524,6 +524,7 @@ export default function DailyTripReportApp(){
   const [sigAck, setSigAck] = useState(false);
   const [notes, setNotes] = useState("");
   const didRestore = useRef(false);
+  const plateFetchIdRef = useRef(0);
   
   // Import/Export states
   const [importError, setImportError] = useState('');
@@ -557,6 +558,8 @@ export default function DailyTripReportApp(){
   const [editingPlateIndex, setEditingPlateIndex] = useState(null);
   const [addingPlateIndex, setAddingPlateIndex] = useState(null);
   const [plateInput, setPlateInput] = useState('');
+  const [hasExportedJson, setHasExportedJson] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
   
   // Show toast notification
   const showNotification = (message, type = 'info', duration = 3000) => {
@@ -604,9 +607,24 @@ export default function DailyTripReportApp(){
       }
     });
 
+    if(!sig?.trim()) errs.push('Driver signature is required');
+
     return errs;
-  },[carrier, terminal, truck, date, driver, extraLines, rows]);
+  },[carrier, terminal, truck, date, driver, extraLines, rows, sig]);
   const isFormValidForExport = validationErrors.length === 0;
+  const canDownloadPdf = isFormValidForExport && hasExportedJson;
+
+  useEffect(() => {
+    setHasExportedJson(false);
+  }, [carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines, notes]);
+
+  const downloadBlockHint = useMemo(() => {
+    if (canDownloadPdf) return null;
+    if (!sig?.trim()) return 'Add your signature to enable download';
+    if (!isFormValidForExport) return 'Complete all required fields';
+    if (!hasExportedJson) return 'Export JSON backup before download';
+    return null;
+  }, [canDownloadPdf, sig, isFormValidForExport, hasExportedJson]);
 
   // Export current form data (blocked if validation fails)
   const handleExport = () => {
@@ -616,7 +634,8 @@ export default function DailyTripReportApp(){
     }
     const currentData = { carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines };
     exportFormData(currentData);
-    showNotification('Data exported successfully!', 'success');
+    setHasExportedJson(true);
+    showNotification('Backup exported! You can now download the PDF.', 'success');
   };
   
   // Import form data
@@ -663,6 +682,11 @@ export default function DailyTripReportApp(){
   // Incognito detection
   useEffect(() => {
     detectIncognito().then(setIsIncognito);
+  }, []);
+
+  // Preload trailer/plate data once on startup
+  useEffect(() => {
+    initializeTrailerData().catch((err) => console.error('Trailer init failed:', err));
   }, []);
 
   // Load driver profile from localStorage on mount
@@ -889,33 +913,41 @@ export default function DailyTripReportApp(){
     }
   }, [carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines, notes]);
 
-  // Fetch plates dynamically for each trailer when it's added
+  const trailerPlateKey = useMemo(
+    () => extraLines.map((line) => String(line.trailer || '').trim()).join('|'),
+    [extraLines]
+  );
+
+  // Fetch plates when trailer numbers change (debounced, race-safe)
   useEffect(() => {
     if (extraLines.length === 0) {
       setDisplayedPlates({});
       return;
     }
 
-    const fetchPlates = async () => {
-      const newDisplayedPlates = {};
-      for (let i = 0; i < extraLines.length; i++) {
-        const line = extraLines[i];
-        if (line.trailer) {
-          try {
-            const plate = await getPlateForTrailer(line.trailer);
-            if (plate) {
-              newDisplayedPlates[i] = plate;
-            }
-          } catch (error) {
-            console.error(`Error fetching plate for trailer ${line.trailer}:`, error);
-          }
-        }
-      }
-      setDisplayedPlates(newDisplayedPlates);
-    };
+    const requestId = ++plateFetchIdRef.current;
+    const timer = window.setTimeout(async () => {
+      try {
+        const plateMap = await getTrailerPlateMap();
+        if (requestId !== plateFetchIdRef.current) return;
 
-    fetchPlates();
-  }, [extraLines]);
+        const nextPlates = {};
+        for (let i = 0; i < extraLines.length; i++) {
+          const trailer = String(extraLines[i].trailer || '').trim();
+          if (!trailer) continue;
+          const plate = lookupPlate(trailer, plateMap);
+          if (plate) nextPlates[i] = plate;
+        }
+
+        setDisplayedPlates(nextPlates);
+      } catch (error) {
+        if (requestId !== plateFetchIdRef.current) return;
+        console.error('Error fetching plates:', error);
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [trailerPlateKey, extraLines.length]);
 
   // Google Sheets - Handle plate management (no caching, always fresh)
   const addPlateForTrailer = async (index, trailerNo) => {
@@ -1499,7 +1531,11 @@ export default function DailyTripReportApp(){
 
   const downloadPdf = async () => {
     if(!isFormValidForExport){
-      showNotification('Please fill all required fields', 'error', 4000);
+      showNotification('Please fill all required fields and add your signature', 'error', 4000);
+      return;
+    }
+    if(!hasExportedJson){
+      showNotification('Export a JSON backup before downloading the PDF', 'error', 4000);
       return;
     }
     if (window.confirm('Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
@@ -1528,23 +1564,6 @@ export default function DailyTripReportApp(){
 
   const sendByEmail = () => {
     alert('Email server is not configured.');
-  };
-  const openPdf = async () => {
-    // Use the same buildPdf() pipeline as download, but open in new tab instead
-    try {
-      const blob = await buildFinalPdfBlob();
-      const url = URL.createObjectURL(blob);
-      const win = window.open(url, '_blank');
-      if (!win) {
-        // fallback: same tab
-        window.location.href = url;
-      }
-      showNotification('PDF opened in new tab', 'success');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch (error) {
-      console.error("Failed to open PDF:", error);
-      showNotification('Failed to open PDF', 'error', 4000);
-    }
   };
   const resetAll = () => {
     if (window.confirm('Resetting the form will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
@@ -2078,7 +2097,8 @@ export default function DailyTripReportApp(){
       
       {/* Main App - Only show if PIN is verified */}
       {isPinVerified && (
-      <div className="card">
+      <>
+      <div className="card pb-32 md:pb-28">
         <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
           <Icon name="warning" size={20} className="text-yellow-700 shrink-0" aria-label="Warning" />
           Your data is saved only for today in this browser. It will be lost if you use Private/Incognito mode, clear cache, switch browsers, change devices, download PDF, or reset the form.
@@ -2643,51 +2663,153 @@ export default function DailyTripReportApp(){
           />
         </div>
 
-        <div className="flex flex-wrap gap-3 justify-start">
-          <button type="button" onClick={downloadPdf} disabled={!isFormValidForExport} className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] ${isFormValidForExport? 'bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95':'text-gray-500 cursor-not-allowed bg-gray-300 border border-gray-400'}`} style={{boxShadow: isFormValidForExport ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'}}>
-            <Icon name="download" size={20} aria-label="Download PDF" />
-            <span>Download</span>
-          </button>
-          <button
-            onClick={handleExport}
-            className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] ${isFormValidForExport? 'bg-blue-600 border border-blue-700 text-white hover:bg-blue-700 active:scale-95':'text-gray-500 cursor-not-allowed bg-gray-300 border border-gray-400'}`}
-            style={{boxShadow: isFormValidForExport ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'}}
-            title="Export current form data to JSON file"
-            disabled={!isFormValidForExport}
-          >
-            <Icon name="upload" size={20} aria-label="Export" />
-            <span>Export</span>
-          </button>
-          <button
-            onClick={triggerFileInput}
-            className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-green-600 border border-green-700 text-white hover:bg-green-700 active:scale-95"
-            style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}
-            title="Import form data from JSON file"
-          >
-            <Icon name="folder-open" size={20} aria-label="Import" />
-            <span>Import</span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            className="hidden"
-          />
-          <button type="button" onClick={openPdf} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
-            <Icon name="book-open" size={20} aria-label="Open PDF in New Tab" />
-            <span>Open PDF</span>
-          </button>
-          <button type="button" onClick={sendByEmail} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-gray-700 border border-gray-600 text-white hover:bg-gray-800 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
-            <Icon name="mail" size={20} aria-label="Send by Email" />
-            <span>Email</span>
-          </button>
-          <button type="button" onClick={resetAll} className="rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 flex items-center gap-2 justify-center min-w-[110px] bg-red-600 border border-red-700 text-white hover:bg-red-700 active:scale-95" style={{boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
-            <Icon name="refresh" size={20} className="text-white" aria-label="Reset" />
-            <span>Reset</span>
-          </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImport}
+          className="hidden"
+        />
+      </div>
+
+      {/* Sticky action bar */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/80 bg-white/95 backdrop-blur-md shadow-[0_-8px_32px_rgba(0,0,0,0.08)]"
+        style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
+      >
+        <div className="mx-auto max-w-5xl px-3 pt-2">
+          {downloadBlockHint && (
+            <p className="mb-2 text-center text-xs font-medium text-amber-700 px-2">
+              <Icon name="warning" size={14} className="inline mr-1 -mt-0.5" />
+              {downloadBlockHint}
+            </p>
+          )}
+
+          <div className="md:hidden flex gap-2 pb-1">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={!isFormValidForExport}
+              className={`flex-1 rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all ${
+                isFormValidForExport
+                  ? hasExportedJson
+                    ? 'bg-green-50 text-green-700 border-2 border-green-200'
+                    : 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Icon name="upload" size={18} />
+              {hasExportedJson ? 'Exported ✓' : 'Export'}
+            </button>
+            <button
+              type="button"
+              onClick={downloadPdf}
+              disabled={!canDownloadPdf}
+              className={`flex-1 rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all ${
+                canDownloadPdf
+                  ? 'bg-gray-900 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Icon name="download" size={18} />
+              Download
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMoreActions(true)}
+              className="shrink-0 rounded-xl border-2 border-gray-200 bg-white px-4 py-3.5 text-gray-600 active:scale-[0.98] transition-all"
+              aria-label="More actions"
+            >
+              <Icon name="more-horizontal" size={20} />
+            </button>
+          </div>
+
+          <div className="hidden md:flex flex-wrap items-center justify-center gap-2 pb-1">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={!isFormValidForExport}
+              className={`rounded-xl px-5 py-3 text-sm font-semibold flex items-center gap-2 active:scale-[0.98] transition-all ${
+                isFormValidForExport
+                  ? hasExportedJson
+                    ? 'bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Icon name="upload" size={18} />
+              {hasExportedJson ? 'Exported ✓' : 'Export Backup'}
+            </button>
+            <button
+              type="button"
+              onClick={downloadPdf}
+              disabled={!canDownloadPdf}
+              className={`rounded-xl px-5 py-3 text-sm font-semibold flex items-center gap-2 active:scale-[0.98] transition-all ${
+                canDownloadPdf
+                  ? 'bg-gray-900 text-white hover:bg-black shadow-sm'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Icon name="download" size={18} />
+              Download PDF
+            </button>
+            <button
+              type="button"
+              onClick={triggerFileInput}
+              className="rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2 border-2 border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition-all"
+            >
+              <Icon name="folder-open" size={18} />
+              Import
+            </button>
+            <button
+              type="button"
+              onClick={sendByEmail}
+              className="rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2 border-2 border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition-all"
+            >
+              <Icon name="mail" size={18} />
+              Email
+            </button>
+            <button
+              type="button"
+              onClick={resetAll}
+              className="rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 active:scale-[0.98] transition-all"
+            >
+              <Icon name="refresh" size={18} />
+              Reset
+            </button>
+          </div>
         </div>
       </div>
+
+      {showMoreActions && (
+        <div
+          className="md:hidden fixed inset-0 z-50 flex items-end justify-center"
+          onClick={() => setShowMoreActions(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full rounded-t-3xl bg-white shadow-2xl"
+            style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="h-1 w-10 rounded-full bg-gray-300" />
+            </div>
+            <div className="px-4 pb-2 pt-1 space-y-1">
+              <button type="button" onClick={() => { setShowMoreActions(false); triggerFileInput(); }} className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-base font-medium text-gray-800 active:bg-gray-100">
+                <Icon name="folder-open" size={20} className="text-green-600" /> Import
+              </button>
+              <button type="button" onClick={() => { setShowMoreActions(false); sendByEmail(); }} className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-base font-medium text-gray-800 active:bg-gray-100">
+                <Icon name="mail" size={20} /> Email
+              </button>
+              <button type="button" onClick={() => { setShowMoreActions(false); resetAll(); }} className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-base font-medium text-red-600 active:bg-gray-100">
+                <Icon name="refresh" size={20} /> Reset Form
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -177,6 +177,13 @@ const ICONS = {
   chevronDown: (
     <path d="m6 9 6 6 6-6" />
   ),
+  "more-horizontal": (
+    <>
+      <circle cx="5" cy="12" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="19" cy="12" r="1" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 16, className = "", strokeWidth = 2, ...props }) {

@@ -12,11 +12,11 @@ export default defineConfig({
       devOptions: { enabled: false },
       manifest: {
         name: 'Daily Trip Report',
-        short_name: 'TripReport',
+        short_name: 'Trip Report',
         start_url: '/',
         display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#344767',
+        background_color: '#1e3a5f',
+        theme_color: '#1e3a5f',
         icons: [
           { src: '/manifest-icon-192.maskable.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/manifest-icon-192.maskable.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },

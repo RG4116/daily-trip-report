@@ -11,12 +11,47 @@
 
 const SHEET_ID = '1yfUqr9uAwUziDx7XJn_tFrBY0c5lrAb6XNl9FM8d_nA';
 const RANGE = 'Sheet1!A:B';
+const SHEET_CACHE_MS = 30_000;
+
+let sheetCache = null;
+let sheetCacheTime = 0;
+
+function normalizeTrailerNo(trailerNo) {
+  const trimmed = String(trailerNo ?? '').trim();
+  if (!trimmed) return '';
+  return trimmed.replace(/^0+/, '') || '0';
+}
+
+function lookupPlate(trailerNo, map) {
+  const trimmed = String(trailerNo ?? '').trim();
+  if (!trimmed || !map) return null;
+  return map[trimmed] || map[normalizeTrailerNo(trimmed)] || null;
+}
+
+function buildTrailerMap(raw) {
+  const map = {};
+  for (const [key, plate] of Object.entries(raw || {})) {
+    const trailer = String(key).trim();
+    const plateNo = String(plate ?? '').trim();
+    if (!trailer || !plateNo) continue;
+    map[trailer] = plateNo;
+    const normalized = normalizeTrailerNo(trailer);
+    if (normalized !== trailer && !map[normalized]) {
+      map[normalized] = plateNo;
+    }
+  }
+  return map;
+}
 
 /**
  * Fetch trailer data from Google Sheets
  * @returns {Promise<Object>} Object mapping trailer numbers to plate numbers
  */
-export const fetchTrailersFromSheet = async () => {
+export const fetchTrailersFromSheet = async (forceRefresh = false) => {
+  if (!forceRefresh && sheetCache && Date.now() - sheetCacheTime < SHEET_CACHE_MS) {
+    return sheetCache;
+  }
+
   try {
     // Using Google Sheets public CSV export
     // This avoids needing authentication for public sheets
@@ -61,7 +96,9 @@ export const fetchTrailersFromSheet = async () => {
     } else {
       console.log(`[OK] ${Object.keys(trailers).length} trailers loaded from Google Sheet:`, trailers);
     }
-    
+
+    sheetCache = trailers;
+    sheetCacheTime = Date.now();
     return trailers;
   } catch (error) {
     console.error('[ERROR] Failed to fetch trailers from Google Sheet:', error.message);
@@ -99,6 +136,8 @@ export const saveTrailerToSheet = async (trailerNo, plateNo) => {
       });
       
       console.log(`[OK] Plate ${plateNo} synced to Google Sheet for trailer ${trailerNo}`);
+      sheetCache = null;
+      sheetCacheTime = 0;
     } catch (webhookError) {
       console.warn('[WARN] Webhook sync failed (will retry on next page load):', webhookError);
       // Plate is saved locally, will sync on next load via initializeTrailerData
@@ -112,24 +151,22 @@ export const saveTrailerToSheet = async (trailerNo, plateNo) => {
 };
 
 /**
+ * Get merged trailer→plate map (sheet + localStorage)
+ */
+export const getTrailerPlateMap = async () => {
+  const sheetsData = await fetchTrailersFromSheet();
+  const localTrailers = JSON.parse(localStorage.getItem('localTrailers') || '{}');
+  return buildTrailerMap({ ...localTrailers, ...sheetsData });
+};
+
+/**
  * Get plate number for a trailer
  * Checks Google Sheet first, then localStorage
  */
 export const getPlateForTrailer = async (trailerNo) => {
   try {
-    // Try Google Sheet
-    const sheetsData = await fetchTrailersFromSheet();
-    if (sheetsData[trailerNo]) {
-      return sheetsData[trailerNo];
-    }
-    
-    // Fall back to localStorage
-    const localTrailers = JSON.parse(localStorage.getItem('localTrailers') || '{}');
-    if (localTrailers[trailerNo]) {
-      return localTrailers[trailerNo];
-    }
-    
-    return null;
+    const map = await getTrailerPlateMap();
+    return lookupPlate(trailerNo, map);
   } catch (error) {
     console.error('Error getting plate:', error);
     return null;
@@ -142,11 +179,7 @@ export const getPlateForTrailer = async (trailerNo) => {
  */
 export const initializeTrailerData = async () => {
   try {
-    const sheetsData = await fetchTrailersFromSheet();
-    const localData = JSON.parse(localStorage.getItem('localTrailers') || '{}');
-    
-    // Merge: Google Sheet data takes precedence
-    const merged = { ...localData, ...sheetsData };
+    const merged = await getTrailerPlateMap();
     localStorage.setItem('localTrailers', JSON.stringify(merged));
     
     console.log('[OK] Trailer data initialized:', merged);
@@ -156,3 +189,5 @@ export const initializeTrailerData = async () => {
     return {};
   }
 };
+
+export { lookupPlate, normalizeTrailerNo };

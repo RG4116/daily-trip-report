@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Daily Trip Report">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1e3a5f"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="256" y1="80" x2="256" y2="280" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="108" fill="url(#shine)"/>
+  <!-- Clipboard -->
+  <rect x="118" y="118" width="168" height="220" rx="22" fill="#fff" fill-opacity="0.95"/>
+  <rect x="166" y="96" width="72" height="36" rx="14" fill="#93c5fd"/>
+  <rect x="148" y="156" width="108" height="12" rx="6" fill="#cbd5e1"/>
+  <rect x="148" y="188" width="92" height="12" rx="6" fill="#cbd5e1"/>
+  <rect x="148" y="220" width="76" height="12" rx="6" fill="#cbd5e1"/>
+  <path d="M176 268l20 20 44-44" fill="none" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Truck -->
+  <path d="M248 292h112l44 44v76H248z" fill="#1d4ed8"/>
+  <path d="M248 292h88v120H248z" fill="#2563eb"/>
+  <path d="M336 292h24l44 44v28h-68z" fill="#60a5fa"/>
+  <rect x="268" y="318" width="52" height="38" rx="8" fill="#dbeafe"/>
+  <circle cx="292" cy="412" r="26" fill="#0f172a"/>
+  <circle cx="292" cy="412" r="14" fill="#94a3b8"/>
+  <circle cx="388" cy="412" r="26" fill="#0f172a"/>
+  <circle cx="388" cy="412" r="14" fill="#94a3b8"/>
+  <path d="M248 356h-36a20 20 0 0 1-20-20v-24" fill="none" stroke="#93c5fd" stroke-width="10" stroke-linecap="round"/>
+</svg>
