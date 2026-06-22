@@ -7,6 +7,7 @@ import { saveTrailerToSheet, getTrailerPlateMap, lookupPlate, initializeTrailerD
 const DRIVER_PIN_HASHES = {
   "Rukan Gocer": "MTExMQ==", // base64('1111')
   "Jesse Middleton": "MjIyMg==", // base64('2222')
+  "Viacheslav Sirotkin": "MzMzMw==", // base64('3333')
 };
 
 // Helper function to hash PIN with base64
@@ -550,8 +551,8 @@ export default function DailyTripReportApp(){
   const driverProfileKey = 'tripReportDriverProfile';
   const lockoutDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
   const maxFailedAttempts = 3;
-  const driverOptions = ['Rukan Gocer', 'Jesse Middleton'];
-  const truckOptions = ['9496', '9499'];
+  const driverOptions = ['Rukan Gocer', 'Jesse Middleton', 'Viacheslav Sirotkin'];
+  const truckOptions = ['9496', '9499', '9502'];
 
   // Google Sheets - Plate management state (displayedPlates UI only, no cache)
   const [displayedPlates, setDisplayedPlates] = useState({}); // { index: plateNo } - UI only, always fresh from Google Sheets
@@ -2175,6 +2176,8 @@ export default function DailyTripReportApp(){
             />
             <datalist id="truck-options">
               <option value="9496" />
+              <option value="9499" />
+              <option value="9502" />
             </datalist>
           </div>
           <div>
@@ -2195,6 +2198,8 @@ export default function DailyTripReportApp(){
             />
             <datalist id="driver-options">
               <option value="Rukan Gocer" />
+              <option value="Jesse Middleton" />
+              <option value="Viacheslav Sirotkin" />
             </datalist>
           </div>
         </div>
