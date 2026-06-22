@@ -880,7 +880,7 @@ export default function DailyTripReportApp(){
       const saved = localStorage.getItem(LS_KEY);
       if (saved) {
         const obj = JSON.parse(saved);
-        if (obj && obj.date === todayLocal()) {
+        if (obj && typeof obj.date === 'string') {
           setCarrier(obj.carrier || "TVM");
           setTerminal(obj.terminal || "Central Yard");
           setTruck(obj.truck || "9499");
@@ -906,12 +906,10 @@ export default function DailyTripReportApp(){
     // Update notification disabled
   }, []);
 
-  // Save to localStorage whenever relevant state changes
+  // Save to localStorage whenever relevant state changes (persists until reset or PDF download)
   useEffect(() => {
     const obj = { carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines, notes };
-    if (date === todayLocal()) {
-      localStorage.setItem(LS_KEY, JSON.stringify(obj));
-    }
+    localStorage.setItem(LS_KEY, JSON.stringify(obj));
   }, [carrier, terminal, truck, date, driver, sig, paperwork, rows, extraLines, notes]);
 
   const trailerPlateKey = useMemo(
@@ -1539,7 +1537,7 @@ export default function DailyTripReportApp(){
       showNotification('Export a JSON backup before downloading the PDF', 'error', 4000);
       return;
     }
-    if (window.confirm('Downloading the PDF will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
+    if (window.confirm('Downloading the PDF will permanently delete all saved trip data in this browser. Are you sure you want to continue?')) {
       try {
         localStorage.removeItem(LS_KEY);
         const blob = await buildFinalPdfBlob();
@@ -1567,7 +1565,7 @@ export default function DailyTripReportApp(){
     alert('Email server is not configured.');
   };
   const resetAll = () => {
-    if (window.confirm('Resetting the form will permanently delete all saved trip data for today in this browser. Are you sure you want to continue?')) {
+    if (window.confirm('Resetting the form will permanently delete all saved trip data in this browser. Are you sure you want to continue?')) {
       // Reset form data but KEEP driver profile in localStorage
       localStorage.removeItem(LS_KEY);
       // DO NOT remove driverProfileKey - keep driver profile saved
@@ -2102,8 +2100,14 @@ export default function DailyTripReportApp(){
       <div className="card pb-32 md:pb-28">
         <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
           <Icon name="warning" size={20} className="text-yellow-700 shrink-0" aria-label="Warning" />
-          Your data is saved only for today in this browser. It will be lost if you use Private/Incognito mode, clear cache, switch browsers, change devices, download PDF, or reset the form.
+          Your data is saved in this browser until you reset the form or download the PDF. It will be lost if you use Private/Incognito mode, clear cache, switch browsers, or change devices.
         </div>
+        {date !== todayLocal() && (
+          <div className="mb-4 rounded-lg bg-blue-100 border border-blue-300 p-3 text-blue-900 text-sm flex items-center gap-2">
+            <Icon name="info" size={20} className="text-blue-700 shrink-0" aria-label="Info" />
+            Saved form date: <strong>{date}</strong>. Start a new shift by resetting the form or updating the date.
+          </div>
+        )}
         {isIncognito && (
           <div className="mb-4 rounded-lg bg-yellow-100 border border-yellow-300 p-3 text-yellow-900 text-sm flex items-center gap-2">
             <Icon name="warning" size={20} className="text-yellow-700 shrink-0" aria-label="Warning" />
