@@ -2105,7 +2105,7 @@ export default function DailyTripReportApp(){
         {date !== todayLocal() && (
           <div className="mb-4 rounded-lg bg-blue-100 border border-blue-300 p-3 text-blue-900 text-sm flex items-center gap-2">
             <Icon name="info" size={20} className="text-blue-700 shrink-0" aria-label="Info" />
-            Saved form date: <strong>{date}</strong>. Start a new shift by resetting the form or updating the date.
+            Saved form date: <strong>{date}</strong>. Overnight shifts can continue on this report; reset the form or update the date only when starting a separate shift.
           </div>
         )}
         {isIncognito && (
